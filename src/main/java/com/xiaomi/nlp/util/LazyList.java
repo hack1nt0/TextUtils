@@ -8,7 +8,7 @@ import java.util.List;
  * Created by dy on 15-5-28.
  */
 public class LazyList<T> implements Iterable<T>{
-    List<T> innerList = null;
+    public List<T> innerList = null;
 
     public LazyList() {}
 

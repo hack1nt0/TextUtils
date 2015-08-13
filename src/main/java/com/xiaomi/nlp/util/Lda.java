@@ -1,6 +1,6 @@
 package com.xiaomi.nlp.util;
 
-import com.xiaomi.dy.Tokenizer.Tokenizer;
+import com.xiaomi.nlp.tokenizer.MyTokenizer;
 
 import java.io.*;
 import java.util.*;
@@ -30,11 +30,12 @@ public class Lda {
         docs = new ArrayList<List<String>>();
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
+            MyTokenizer tokenizer = MyTokenizer.getInstance();
             while (true) {
                 String line = in.readLine();
                 if (line == null) break;
                 String text = line.split("\\t")[2];
-                docs.add(Arrays.asList(Tokenizer.cut(text)));
+                docs.add(Arrays.asList(tokenizer.getTokens(text)));
             }
         } catch (IOException e) {
             e.printStackTrace();

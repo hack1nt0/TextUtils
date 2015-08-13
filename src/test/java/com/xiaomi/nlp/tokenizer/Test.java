@@ -8,7 +8,7 @@ import java.io.*;
 public class Test {
     public static void main(String[] args) throws IOException{
         //MyTokenizer tokenizer = new MyTokenizer("com/xiaomi/nlp/tokenizer/jieba.dict.utf8.sorted", "com/xiaomi/nlp/tokenizer/hmm_model.utf8");
-        MyTokenizer tokenizer = new MyTokenizer();
+        MyTokenizer tokenizer = MyTokenizer.getInstance();
         String testFilePath = "data/testTokenizer.txt";
         String contrastFilePath = "data/tokenizerRet.txt";
         BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(testFilePath)));

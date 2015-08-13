@@ -1,5 +1,7 @@
 package com.xiaomi.nlp.tokenizer;
 
+import org.apache.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,16 +12,24 @@ import java.util.List;
 /**
  * Created by dy on 14-11-20.
  */
-public class MyTokenizer {
-    Dict dict;
-    HMM hmm;
 
-    public MyTokenizer() {
+public class MyTokenizer {
+    private static MyTokenizer INSTANCE;
+    private static Dict dict;
+    private static HMM hmm;
+    private static Logger logger = Logger.getLogger(MyTokenizer.class);
+
+    public static MyTokenizer getInstance() {
+        if (INSTANCE == null) INSTANCE = new MyTokenizer();
+        return INSTANCE;
+    }
+
+    private MyTokenizer() {
         dict = new AlphabeticalOrderArray("com/xiaomi/nlp/tokenizer/jieba.dict.utf8.sorted");
         hmm =  new HMM("com/xiaomi/nlp/tokenizer/hmm_model.utf8");
     }
 
-    public MyTokenizer(String dictFilePath, String HMMFilePath) {
+    protected MyTokenizer(String dictFilePath, String HMMFilePath) {
         dict = new AlphabeticalOrderArray(dictFilePath);
         //dict = new Trie(dictFilePath);
         hmm = new HMM(HMMFilePath);
@@ -76,16 +86,21 @@ public class MyTokenizer {
         int index = dict.contains(token.toCharArray(), 0, token.length());
         return index >= 0;
     }
+
+    public void destroy() {
+        INSTANCE = null;
+    }
 }
 
 class HMM {
-    int YN = Character.MAX_VALUE;
+    private static Logger logger = Logger.getLogger(HMM.class);
+    int YN = Character.MAX_VALUE + 1;
     int XN = 4;
-    Double[] PPx = new Double[XN];
-    Double[][] Pxixj = new Double[XN][XN];
-    Double[][] Pxiyi = new Double[XN][YN];
-    Double[][] dp = new Double[YN][XN];
-    int[][] path = new int[YN][XN];
+    double[] PPx = new double[XN];
+    double[][] Pxixj = new double[XN][XN];
+    double[][] Pxiyi = new double[XN][YN];
+    double[][] dp; //= new double[YN][XN];
+    int[][] path; //= new int[YN][XN];
     String decode = "BEMS";
     //B E M S
     int[][] autoM = {
@@ -146,6 +161,9 @@ class HMM {
     }
 
     public List<String> getTokens(char[] text, int L, int R) {
+        if (dp == null || dp.length < text.length) dp = new double[text.length][XN];
+        if (path == null || path.length < text.length) path = new int[text.length][XN];
+
         List<String> ret = new ArrayList<String>();
         int M = R - L;
         //Arrays.fill(dp[M], 0.0);

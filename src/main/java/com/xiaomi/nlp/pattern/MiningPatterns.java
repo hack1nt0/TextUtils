@@ -2,11 +2,14 @@ package com.xiaomi.nlp.pattern;
 
 //import org.apache.commons.math3.analysis.function.Min;
 
+import com.xiaomi.nlp.tokenizer.MyTokenizer;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Created by DY on 15/2/28.
@@ -15,33 +18,43 @@ import org.apache.logging.log4j.Logger;
 
 public class MiningPatterns {
 
-    private static Logger logger = new Logger(MiningPatterns.class);
+    private static Logger logger = Logger.getLogger(MiningPatterns.class);
 
     static {
         BasicConfigurator.configure();
         logger.setLevel(Level.ERROR);
     }
 
-    public static class CorpusM implements PatternMinable {
+    public class Line {
         String text;
+        String[] tokens;
         int sup;
 
-        public CorpusM(String text, int sup) {
+        public Line(String text, int sup) {
             this.text = text;
             this.sup = sup;
         }
 
-        @Override
-        public String getCorpus() {
+        public Line(String[] tokens, int sup) {
+            this.tokens = tokens;
+            this.sup = sup;
+        }
+
+        public String getText() {
+            if (text != null) return text;
+            StringBuffer sb = new StringBuffer("");
+            for (String token: tokens) sb.append(token);
+            text = sb.toString();
             return text;
         }
 
-        @Override
-        public List<String> getTokens() {
-            return null;
+        public String[] getTokens() {
+            if (tokens != null) return tokens;
+            MyTokenizer tokenizer = MyTokenizer.getInstance();
+            tokens = tokenizer.getTokens(text);
+            return tokens;
         }
 
-        @Override
         public int getSupport() {
             return sup;
         }
@@ -63,27 +76,49 @@ public class MiningPatterns {
         //this.SupRatio = 0.3;
     }
 
-    public boolean inital(List<Line> toBeMine) {
-        this.ToBeMine = toBeMine;
-        this.CorpusTotN = toBeMine.size();
+    public boolean inital(List<Line> lines) {
+        this.ToBeMine = lines;
+        this.CorpusTotN = lines.size();
         Patterns = new SmsPattern[CorpusTotN * 2];
 
-        for (int i = 0; i < toBeMine.size(); ++i) {
-            String tmp = corpusM.getCorpus().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
+        for (int i = 0; i < lines.size(); ++i) {
+            String tmp = lines.get(i).getText().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
             tmp += ";";
             SmsPattern sms = SmsPattern.getNew(tmp);
-            sms.baseSup = corpusM.getSupport();
+            sms.baseSup = lines.get(i).getSupport();
             sms.id = i;
             sms.corpusId = i;
             Patterns[i] = sms;
         }
-        MinSup = (int)Math.ceil(toBeMine.size() * SupRatio);
+        MinSup = (int)Math.ceil(ToBeMine.size() * SupRatio);
         return true;
+    }
+
+    private int patCnt = 0;
+    private List<SmsPattern> patternList = new ArrayList<SmsPattern>();
+    public void addText(String[] words, int sup) {
+        StringBuffer sb = new StringBuffer("");
+        for (String word: words) sb.append(word);
+        sb.append(";");
+        String line = sb.toString().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
+        SmsPattern sms = SmsPattern.getNew(line);
+        sms.baseSup = sup;
+        sms.id = patCnt;
+        sms.corpusId = patCnt;
+        patternList.add(sms);
+        ++patCnt;
     }
 
     //生成patterns
     public List<SmsPattern> getPatWithPosition() {
         logger.info("class capacity(records): " + CorpusTotN);
+
+        MinSup = (int)Math.ceil(patCnt * SupRatio);
+        if (Patterns == null) {
+            Patterns = new SmsPattern[patternList.size() * 2];
+            for (int i = 0; i < patternList.size(); ++i) Patterns[i] = patternList.get(i);
+            patternList.clear();
+        }
 
         List<SmsPattern> ret = new ArrayList<SmsPattern>();
 
