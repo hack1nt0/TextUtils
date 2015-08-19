@@ -1,26 +1,29 @@
 package com.xiaomi.nlp.classification.spamsms;
 
-import com.xiaomi.nlp.tokenizer.MyTokenizer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.mllib.classification.NaiveBayes;
-import org.apache.spark.mllib.classification.NaiveBayesModel;
+import org.apache.spark.ml.Pipeline;
+import org.apache.spark.ml.PipelineModel;
+import org.apache.spark.ml.PipelineStage;
+import org.apache.spark.ml.classification.GBTClassifier;
+import org.apache.spark.ml.feature.HashingTF;
+import org.apache.spark.ml.feature.Tokenizer;
 import org.apache.spark.mllib.evaluation.MulticlassMetrics;
-import org.apache.spark.mllib.feature.HashingTF;
-import org.apache.spark.mllib.linalg.Vector;
-import org.apache.spark.mllib.regression.LabeledPoint;
+import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SQLContext;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
-import java.util.Arrays;
 
 /**
  * Created by dy on 15-8-13.
@@ -36,24 +39,79 @@ public class SpamClassifier {
         conf.registerKryoClasses(new Class[]{});
         conf.setIfMissing("spark.master", "local[" + NUM_THREAD + "]");
         final JavaSparkContext sc = new JavaSparkContext(conf);
-        JavaRDD<LabeledPoint> sms = (sc
-                .textFile("data/train/spamsms.txt")
-                .repartition(NUM_THREAD)
-                .map(new Function<String, LabeledPoint>() {
-                    @Override
-                    public LabeledPoint call(String v1) throws Exception {
-                        JSONObject jsonObject = new JSONObject(v1);
-                        String body = jsonObject.getString("body");
-                        boolean isSpam = jsonObject.getBoolean("spam");
-                        MyTokenizer myTokenizer = MyTokenizer.getInstance();
-                        String[] tokens = myTokenizer.getTokens(body);
+        final SQLContext sqlContext = new SQLContext(sc);
+        JavaRDD<String>[] splits = sc.textFile("data/train/spamsms.txt", NUM_THREAD).randomSplit(new double[]{0.8, 0.2});
+        DataFrame trainData = (sqlContext
+                .createDataFrame(splits[0]
+                        .map(new Function<String, Document>() {
+                            @Override
+                            public Document call(String s) throws Exception {
+                                JSONObject jsonObject = new JSONObject(s);
+                                int id = -1; //jsonObject.getInt("id");
+                                String body = jsonObject.getString("body");
+                                boolean isSpam = jsonObject.getBoolean("spam");
+                                return new LabeledDocument(id, body, isSpam ? 1.0 : 0.0);
+                            }
+                        }), LabeledDocument.class));
+        //ML pipeline
+        Tokenizer tokenizer = new ChiTokenizer().setInputCol("text").setOutputCol("words");
+        HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("features");
+        NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator();//todo
+        GBTClassifier gbtClassifier = new GBTClassifier();
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, naiveBayesEstimator, gbtClassifier});
 
-                        HashingTF hashingTF = new HashingTF();
-                        Vector tf = hashingTF.transform(Arrays.asList(tokens));
-                        LabeledPoint labeledPoint = new LabeledPoint(isSpam ? 1.0 : 0.0, tf);
-                        return labeledPoint;
+        //train
+        PipelineModel model = pipeline.fit(trainData);
+
+        //test
+        DataFrame testData = (sqlContext
+                .createDataFrame(splits[1]
+                        .map(new Function<String, Document>() {
+                            @Override
+                            public Document call(String s) throws Exception {
+                                JSONObject jsonObject = new JSONObject(s);
+                                int id = -1; //jsonObject.getInt("id");
+                                String body = jsonObject.getString("body");
+                                boolean isSpam = jsonObject.getBoolean("spam");
+                                return new Document(id, body);
+                            }
+                        }), Document.class));
+        DataFrame predictions = model.transform(testData);
+        for (Row r: predictions.select("id", "text", "label", "prediction").collect()) {
+            System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
+                    + ", prediction=" + r.get(3));
+        }
+
+        JavaPairRDD<Object, Object> predAndLabel = (predictions
+                .select("prediction", "label")
+                .javaRDD()
+                .mapToPair(new PairFunction<Row, Object, Object>() {
+                    @Override
+                    public Tuple2<Object, Object> call(Row row) throws Exception {
+                        return new Tuple2<Object, Object>(row.get(0), row.get(1));
                     }
                 }));
+
+        printTabular(new MulticlassMetrics(predAndLabel.rdd()));
+
+                        /*
+                        JavaRDD < LabeledPoint > sms = (sc
+                                .repartition(NUM_THREAD)
+                                .map(new Function<String, LabeledPoint>() {
+                                    @Override
+                                    public LabeledPoint call(String v1) throws Exception {
+                                        JSONObject jsonObject = new JSONObject(v1);
+                                        String body = jsonObject.getString("body");
+                                        boolean isSpam = jsonObject.getBoolean("spam");
+                                        MyTokenizer myTokenizer = MyTokenizer.getInstance();
+                                        String[] tokens = myTokenizer.getTokens(body);
+
+                                        HashingTF hashingTF = new HashingTF();
+                                        Vector tf = hashingTF.transform(Arrays.asList(tokens));
+                                        LabeledPoint labeledPoint = new LabeledPoint(isSpam ? 1.0 : 0.0, tf);
+                                        return labeledPoint;
+                                    }
+                                }));
 
         JavaRDD<LabeledPoint>[] splits = sms.randomSplit(new double[]{0.8, 0.2}, 11L);
         JavaRDD<LabeledPoint> trainData = splits[0];
@@ -137,5 +195,33 @@ public class SpamClassifier {
         out.println("Recall:" + 100.0 * multiclassMetrics.recall() + "%\tPrecision:" + 100.0 * multiclassMetrics.precision() + "%\tfMeasure:" + 100.0 * multiclassMetrics.fMeasure() + "%\tWRecall:" + 100.0 * multiclassMetrics.weightedRecall() + "%\tWPrecision:" + 100.0 * multiclassMetrics.weightedPrecision() + "%\tWFMeasure:" + 100.0 * multiclassMetrics.weightedFMeasure() + "%");
         out.println("===================================");
         System.out.println(stringWriter.toString());
+    }
+
+    static class Document implements Serializable {
+        private long id;
+        private String text;
+
+        public Document(long id, String text) {
+            this.id = id;
+            this.text = text;
+        }
+
+        public long getId() { return this.id; }
+        public void setId(long id) { this.id = id; }
+
+        public String getText() { return this.text; }
+        public void setText(String text) { this.text = text; }
+    }
+
+    static class LabeledDocument extends Document implements Serializable {
+        private double label;
+
+        public LabeledDocument(long id, String text, double label) {
+            super(id, text);
+            this.label = label;
+        }
+
+        public double getLabel() { return this.label; }
+        public void setLabel(double label) { this.label = label; }
     }
 }
