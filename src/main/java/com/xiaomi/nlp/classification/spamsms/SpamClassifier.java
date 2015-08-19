@@ -11,6 +11,7 @@ import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
 import org.apache.spark.ml.classification.GBTClassifier;
 import org.apache.spark.ml.feature.HashingTF;
+import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
 import org.apache.spark.mllib.evaluation.MulticlassMetrics;
 import org.apache.spark.sql.DataFrame;
@@ -54,11 +55,12 @@ public class SpamClassifier {
                             }
                         }), LabeledDocument.class));
         //ML pipeline
-        Tokenizer tokenizer = new ChiTokenizer().setInputCol("text").setOutputCol("words");
-        HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("features");
+        Tokenizer tokenizer = new ChiTokenizer().setInputCol("text").setOutputCol("tokens");
+        HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("tf");
+        IDF idf = new IDF().setInputCol("tf").setOutputCol("tf-idf");
         NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator();//todo
-        GBTClassifier gbtClassifier = new GBTClassifier();
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, naiveBayesEstimator, gbtClassifier});
+        GBTClassifier gbtClassifier = new GBTClassifier(); //todo
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, idf, naiveBayesEstimator, gbtClassifier});
 
         //train
         PipelineModel model = pipeline.fit(trainData);
