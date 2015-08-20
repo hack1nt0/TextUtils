@@ -10,6 +10,7 @@ import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
 import org.apache.spark.ml.classification.GBTClassifier;
+import org.apache.spark.ml.feature.Binarizer;
 import org.apache.spark.ml.feature.HashingTF;
 import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
@@ -58,12 +59,17 @@ public class SpamClassifier {
         Tokenizer tokenizer = new ChiTokenizer().setInputCol("text").setOutputCol("tokens");
         HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("tf");
         IDF idf = new IDF().setInputCol("tf").setOutputCol("tf-idf");
-        NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator();//todo
-        GBTClassifier gbtClassifier = new GBTClassifier(); //todo
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, idf, naiveBayesEstimator, gbtClassifier});
+        NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
+                .setInputCols(new String[]{"label", idf.getOutputCol()})
+                .setOutputCol("nb-pred");
+        //GBTClassifier gbtClassifier = new GBTClassifier(); //todo
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, idf, naiveBayesEstimator});
 
         //train
         PipelineModel model = pipeline.fit(trainData);
+
+        trainData.show();
+        model.transform(trainData).show();
 
         //test
         DataFrame testData = (sqlContext
@@ -199,31 +205,4 @@ public class SpamClassifier {
         System.out.println(stringWriter.toString());
     }
 
-    static class Document implements Serializable {
-        private long id;
-        private String text;
-
-        public Document(long id, String text) {
-            this.id = id;
-            this.text = text;
-        }
-
-        public long getId() { return this.id; }
-        public void setId(long id) { this.id = id; }
-
-        public String getText() { return this.text; }
-        public void setText(String text) { this.text = text; }
-    }
-
-    static class LabeledDocument extends Document implements Serializable {
-        private double label;
-
-        public LabeledDocument(long id, String text, double label) {
-            super(id, text);
-            this.label = label;
-        }
-
-        public double getLabel() { return this.label; }
-        public void setLabel(double label) { this.label = label; }
-    }
 }
