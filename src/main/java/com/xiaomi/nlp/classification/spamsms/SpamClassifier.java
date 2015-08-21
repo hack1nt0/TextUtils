@@ -9,11 +9,10 @@ import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
-import org.apache.spark.ml.classification.GBTClassifier;
-import org.apache.spark.ml.feature.Binarizer;
 import org.apache.spark.ml.feature.HashingTF;
 import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
+import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.mllib.evaluation.MulticlassMetrics;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
@@ -24,8 +23,8 @@ import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.io.PrintWriter;
-import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.HashMap;
 
 /**
  * Created by dy on 15-8-13.
@@ -56,14 +55,29 @@ public class SpamClassifier {
                             }
                         }), LabeledDocument.class));
         //ML pipeline
+        CommonCharacterTransformer ccratio = new CommonCharacterTransformer().setDict().setInputCol("text").setOutputCol("comm_char_ratio");
         Tokenizer tokenizer = new ChiTokenizer().setInputCol("text").setOutputCol("tokens");
         HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("tf");
-        IDF idf = new IDF().setInputCol("tf").setOutputCol("tf-idf");
+        IDF idf = new IDF().setInputCol(hashingTF.getOutputCol()).setOutputCol("tf-idf");
         NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
-                .setInputCols(new String[]{"label", idf.getOutputCol()})
-                .setOutputCol("nb-pred");
-        //GBTClassifier gbtClassifier = new GBTClassifier(); //todo
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, idf, naiveBayesEstimator});
+                .setInputCols(new String[]{"label", hashingTF.getOutputCol()})
+                .setOutputCol("nb_pred");
+        VectorAssembler gbtFeatAssembler = new VectorAssembler()
+                .setInputCols(new String[]{naiveBayesEstimator.getOutputCol(), ccratio.getOutputCol()})
+                .setOutputCol("gbt_feat");
+
+        GBTEstimator gbtEstimator = new GBTEstimator()
+                .setInputCols(new String[]{"label", gbtFeatAssembler.getOutputCol()})
+                .setOutputCol("gbt-pred")
+                .setNumIterations(5)
+                ;
+        HashMap<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
+        categoricalFeaturesInfo.put(0, 0);
+        gbtEstimator.setCategoricalFeaturesInfo(categoricalFeaturesInfo);
+
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator, gbtFeatAssembler, gbtEstimator});
+
+        String finalPred = gbtEstimator.getOutputCol();
 
         //train
         PipelineModel model = pipeline.fit(trainData);
@@ -81,17 +95,17 @@ public class SpamClassifier {
                                 int id = -1; //jsonObject.getInt("id");
                                 String body = jsonObject.getString("body");
                                 boolean isSpam = jsonObject.getBoolean("spam");
-                                return new Document(id, body);
+                                return new LabeledDocument(id, body, isSpam ? 1.0 : 0.0);
                             }
-                        }), Document.class));
+                        }), LabeledDocument.class));
         DataFrame predictions = model.transform(testData);
-        for (Row r: predictions.select("id", "text", "label", "prediction").collect()) {
+        for (Row r: predictions.select("id", "text", "label", finalPred).collect()) {
             System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
                     + ", prediction=" + r.get(3));
         }
 
         JavaPairRDD<Object, Object> predAndLabel = (predictions
-                .select("prediction", "label")
+                .select(finalPred, "label")
                 .javaRDD()
                 .mapToPair(new PairFunction<Row, Object, Object>() {
                     @Override

@@ -31,6 +31,10 @@ final class NaiveBayesEstimator(override val uid: String) extends Estimator[Naiv
     this
   }
 
+  def getOutputCol: String = {
+    outputCol
+  }
+
   val naiveBayes: NaiveBayes = new NaiveBayes().setLambda(1)
   override def fit(dataset: DataFrame): NaiveBayesTransformer = {
     val trainData = dataset.select(inputCols(0), inputCols(1))
