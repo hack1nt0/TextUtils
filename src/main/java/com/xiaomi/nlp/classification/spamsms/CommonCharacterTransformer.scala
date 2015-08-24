@@ -55,7 +55,7 @@ class CommonCharacterTransformer(override val uid: String) extends Transformer {
   }
 
   override def transform(dataset: DataFrame): DataFrame = {
-    val sqlfunc = udf((text: String) => text.count(p => dict.contains(p) || p < 128) / (0.0 + text.length)) //todo
+    val sqlfunc = udf((text: String) => if (text.length == 0) 0 else (text.count(p => dict.contains(p) || p < 128) / (0.0 + text.length))) //todo
     dataset.withColumn(outputCol, sqlfunc(dataset.col(inputCol)))
   }
 
@@ -74,6 +74,6 @@ object CommonCharacterTransformer extends App {
     .map(p => p.trim().split(" "))
     .filter({case Array(id: String, ch: String) => id.toInt <= 3500})
     .foreach(p => out.println(p(1)(0)))
-  "，。！？".foreach(p => out.println(p))
+  "，。！？；：［］（）、｛｝／《》@＃$＊＋－～".foreach(p => out.println(p))
   out.close()
 }

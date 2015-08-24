@@ -3,7 +3,8 @@ package com.xiaomi.nlp.pattern;
 import com.xiaomi.nlp.util.ACAutomation;
 import com.xiaomi.nlp.util.LazyList;
 
-import java.io.BufferedReader;
+import java.io.BufferedReader
+        ;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
@@ -12,12 +13,12 @@ import java.util.*;
  * Created by DY on 15/3/20.
  */
 public class SmsPatterns {
-    private static int MAXTOKENLEN = 1000;//maximum token-length of sms
+    private static int MAXTOKENLEN = 1000;//maximum token-length of sms todo need to be dynamic reset
     private static int[][] Dp = new int[MAXTOKENLEN][MAXTOKENLEN];
     private static int[][] Path = new int[MAXTOKENLEN][MAXTOKENLEN];
     private static int[] LenA = new int[MAXTOKENLEN];
     private static int[] LenB = new int[MAXTOKENLEN];
-    private static String INVALIDWILDCARDDICTPATH = "dy/invalidWildcardDict.txt";
+    private static String INVALIDWILDCARDDICTPATH = "com/xiaomi/nlp/pattern/invalidWildcardDict.txt"; //todo token those cannot be generalized
     private static ACAutomation InvalidBoundWildcardDict = null;
     private static ACAutomation InvalidWildcardDict = null;
     static {
@@ -72,7 +73,7 @@ public class SmsPatterns {
             nPatternList.add(cand.get(i - 1));
         }
         cand.chds = new LazyList<SmsPattern>(nPatternList);
-        cand.baseSup = A.baseSup + B.baseSup;
+        //cand.baseSup = A.baseSup + B.baseSup;
         return cand;
     }
 

@@ -26,14 +26,57 @@ public abstract class SmsPattern implements Comparable<SmsPattern> {
     }
     public LazyList<SmsPattern> chds = new LazyList<SmsPattern>();
     public Map<Integer,Map<String,List<Integer>>> wildcards; // [pos, [content, corpusId]]
-    public Set<SmsPattern> sourceIndex = new HashSet<SmsPattern>(Arrays.asList(this)); // all corpus containing this tokens, whose size indicates the tokens's support rating
+    //public HashSet<SmsPattern> sourceIndex = new HashSet<SmsPattern>(Arrays.asList(this)); // all corpus containing this tokens, whose size indicates the tokens's support rating
+    public BitSet sourceIndex = new BitSet(0);
     public SmsPattern lc, rc;
     public int sizeInToken;
     public int id;
     public int corpusId = -1;
     public boolean used = false;
-    public int baseSup;
+    //public int baseSup;
     public SmsPattern origin;//pattern's origin(for the purpose of updating the wildcards)
+
+    //for hashCode and equals
+    public String plainString;
+
+    public void reset() {
+        used = false;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SmsPattern that = (SmsPattern) o;
+
+        if (this.plainString == null) plainString = this.toString();
+        if (that.plainString == null) plainString = that.toString();
+        return plainString.equals(that.plainString);
+
+    }
+
+    @Override
+    public int hashCode() {
+        if (this.plainString == null) plainString = this.toString();
+        return plainString.hashCode();
+    }
+
+    public BitSet getSource() {
+        return sourceIndex;
+    }
+
+    public void setSource(BitSet sourceIndex) {
+        this.sourceIndex = sourceIndex;
+    }
+
+    public void addSource(BitSet deltaSourceIndex) {
+        this.sourceIndex.or(deltaSourceIndex);
+    }
+
+    public void addSource(int singleSource) {
+        this.sourceIndex.set(singleSource);
+    }
 
     public SmsPattern get(int cur) {
         return chds.get(cur);
@@ -68,10 +111,20 @@ public abstract class SmsPattern implements Comparable<SmsPattern> {
         return res;
     }
 
+    private int finalSup;
+    public void setFinalSup(int value) {
+        this.finalSup = value;
+    }
+
     public int getSup() {
+        return this.finalSup;
+    }
+
+    public int getSup(Map<Integer, Integer> baseSupMap, int from) {
         //if (sourceIndex == null) return baseSup;
         int res = 0;
-        for (SmsPattern source: sourceIndex) res += source.baseSup;
+        for (int cand = sourceIndex.nextSetBit(0); cand >= 0; cand = sourceIndex.nextSetBit(cand + 1))
+            res += baseSupMap.get(cand + from);
         return res;
     }
 
@@ -330,6 +383,10 @@ class Token extends SmsPattern {
         return text + ' ';
     }
 
+    public String toString(boolean x) {
+        return this.toString();
+    }
+
     @Override
     public int getSizeInToken() {
         //return Math.min(text.length(), 1);
@@ -397,6 +454,7 @@ class OrdSent extends SmsPattern {
         //res.append(DELIMITER);
         return res.toString();
     }
+
 
     @Override
     public SmsPattern getLctpWith(SmsPattern other) {
@@ -576,18 +634,13 @@ class BulletSent extends SmsPattern {
 
         Collections.reverse(smsPatternList);
 
-        Set<SmsPattern> sourceIds = null;
-        if (A.sourceIndex == null) {
+        if (A.sourceIndex == null)
             if (B.sourceIndex != null) throw new RuntimeException("sourceIndex of A and B isn't consistent!");
-        } else {
-            sourceIds = new HashSet<SmsPattern>();
-            sourceIds.addAll(A.sourceIndex);
-            sourceIds.addAll(B.sourceIndex);
-        }
 
         SmsPattern res = new BulletSent();
         res.chds = new LazyList<SmsPattern>(smsPatternList);
-        res.sourceIndex = sourceIds;
+        //res.addSource(A.sourceIndex);
+        //res.addSource(B.sourceIndex);
         res.lc = A;
         res.rc = B;
         return res;
@@ -669,18 +722,13 @@ class Sms extends SmsPattern {
 
         Collections.reverse(smsPatternList);
 
-        Set<SmsPattern> sourceIds = null;
-        if (A.sourceIndex == null) {
+        if (A.sourceIndex == null)
             if (B.sourceIndex != null) throw new RuntimeException("sourceIndex of A and B isn't consistent!");
-        } else {
-            sourceIds = new HashSet<SmsPattern>();
-            sourceIds.addAll(A.sourceIndex);
-            sourceIds.addAll(B.sourceIndex);
-        }
 
         SmsPattern res = new Sms();
         res.chds = new LazyList<SmsPattern>(smsPatternList);
-        res.sourceIndex = sourceIds;
+        //res.addSource(A.sourceIndex);
+        //res.addSource(B.sourceIndex);
         res.lc = A;
         res.rc = B;
         return res;

@@ -6,6 +6,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
@@ -14,9 +15,11 @@ import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
 import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.mllib.evaluation.MulticlassMetrics;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.api.java.UDF1;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +27,9 @@ import scala.Tuple2;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by dy on 15-8-13.
@@ -41,68 +46,104 @@ public class SpamClassifier {
         conf.setIfMissing("spark.master", "local[" + NUM_THREAD + "]");
         final JavaSparkContext sc = new JavaSparkContext(conf);
         final SQLContext sqlContext = new SQLContext(sc);
-        JavaRDD<String>[] splits = sc.textFile("data/train/spamsms.txt", NUM_THREAD).randomSplit(new double[]{0.8, 0.2});
-        DataFrame trainData = (sqlContext
-                .createDataFrame(splits[0]
-                        .map(new Function<String, Document>() {
-                            @Override
-                            public Document call(String s) throws Exception {
-                                JSONObject jsonObject = new JSONObject(s);
-                                int id = -1; //jsonObject.getInt("id");
-                                String body = jsonObject.getString("body");
-                                boolean isSpam = jsonObject.getBoolean("spam");
-                                return new LabeledDocument(id, body, isSpam ? 1.0 : 0.0);
-                            }
-                        }), LabeledDocument.class));
+        JavaRDD<Document>[] splits = sc
+                .textFile("data/train/spamsms.txt", NUM_THREAD)
+                .map(new Function<String, Document>() {
+                    @Override
+                    public Document call(String s) throws Exception {
+                            JSONObject jsonObject = new JSONObject(s);
+                            int id = -1; //jsonObject.getInt("id");
+                            String body = jsonObject.getString("body");
+                            boolean isSpam = jsonObject.getBoolean("spam");
+                            return new LabeledDocument(id, body, isSpam ? 1.0 : 0.0);
+                        }
+                    })
+                .zipWithIndex()
+                .map(new Function<Tuple2<Document,Long>, Document>() {
+                    @Override
+                    public Document call(Tuple2<Document, Long> v1) throws Exception {
+                        Document res = v1._1();
+                        res.setId(v1._2());
+                        return res;
+                    }
+                })
+                .randomSplit(new double[]{0.8, 0.2});
+
+
+        DataFrame trainData = sqlContext.createDataFrame(splits[0], LabeledDocument.class);
         //ML pipeline
         CommonCharacterTransformer ccratio = new CommonCharacterTransformer().setDict().setInputCol("text").setOutputCol("comm_char_ratio");
         Tokenizer tokenizer = new ChiTokenizer().setInputCol("text").setOutputCol("tokens");
         HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("tf");
-        IDF idf = new IDF().setInputCol(hashingTF.getOutputCol()).setOutputCol("tf-idf");
+        IDF idf = new IDF().setInputCol(hashingTF.getOutputCol()).setOutputCol("tf_idf");
         NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
                 .setInputCols(new String[]{"label", hashingTF.getOutputCol()})
                 .setOutputCol("nb_pred");
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator});
+        PipelineModel nbModel = pipeline.fit(trainData);
+        trainData = nbModel.transform(trainData);
+        trainData.show();
+
+        Map map = trainData.javaRDD()
+                .map(new Function<Row, Double>() {
+                    @Override
+                    public Double call(Row v1) throws Exception {
+                        return v1.getDouble(7);
+                    }
+                })
+                .countByValue();
+        System.out.println(map.toString());
+
         VectorAssembler gbtFeatAssembler = new VectorAssembler()
                 .setInputCols(new String[]{naiveBayesEstimator.getOutputCol(), ccratio.getOutputCol()})
                 .setOutputCol("gbt_feat");
 
         GBTEstimator gbtEstimator = new GBTEstimator()
                 .setInputCols(new String[]{"label", gbtFeatAssembler.getOutputCol()})
-                .setOutputCol("gbt-pred")
+                .setOutputCol("gbt_pred")
                 .setNumIterations(5)
                 ;
         HashMap<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
-        categoricalFeaturesInfo.put(0, 0);
+        categoricalFeaturesInfo.put(0, 2);
         gbtEstimator.setCategoricalFeaturesInfo(categoricalFeaturesInfo);
+        pipeline = new Pipeline().setStages(new PipelineStage[]{gbtFeatAssembler, gbtEstimator});
+        PipelineModel gbtModel = pipeline.fit(trainData);
+        trainData = gbtModel.transform(trainData);
+        trainData.show();
 
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator, gbtFeatAssembler, gbtEstimator});
+        System.out.println(gbtModel.toString());
 
         String finalPred = gbtEstimator.getOutputCol();
-
-        //train
-        PipelineModel model = pipeline.fit(trainData);
-
-        trainData.show();
-        model.transform(trainData).show();
-
         //test
-        DataFrame testData = (sqlContext
-                .createDataFrame(splits[1]
-                        .map(new Function<String, Document>() {
-                            @Override
-                            public Document call(String s) throws Exception {
-                                JSONObject jsonObject = new JSONObject(s);
-                                int id = -1; //jsonObject.getInt("id");
-                                String body = jsonObject.getString("body");
-                                boolean isSpam = jsonObject.getBoolean("spam");
-                                return new LabeledDocument(id, body, isSpam ? 1.0 : 0.0);
-                            }
-                        }), LabeledDocument.class));
-        DataFrame predictions = model.transform(testData);
+        DataFrame testData = sqlContext.createDataFrame(splits[1], LabeledDocument.class);
+
+        DataFrame predictions0 = nbModel.transform(testData);
+        /*
+        for (Row r: predictions0.select("id", "text", "label", finalPred).collect()) {
+            System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
+                    + ", prediction=" + r.get(3));
+        }
+        */
+
+        JavaPairRDD<Object, Object> predAndLabel0 = (predictions0
+                .select("nb_pred", "label")
+                .javaRDD()
+                .mapToPair(new PairFunction<Row, Object, Object>() {
+                    @Override
+                    public Tuple2<Object, Object> call(Row row) throws Exception {
+                        return new Tuple2<Object, Object>(row.get(0), row.get(1));
+                    }
+                }));
+
+        printTabular(new MulticlassMetrics(predAndLabel0.rdd()));
+
+        DataFrame predictions = gbtModel.transform(nbModel.transform(testData));
+        /*
         for (Row r: predictions.select("id", "text", "label", finalPred).collect()) {
             System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
                     + ", prediction=" + r.get(3));
         }
+        */
 
         JavaPairRDD<Object, Object> predAndLabel = (predictions
                 .select(finalPred, "label")
@@ -203,7 +244,7 @@ public class SpamClassifier {
         out.println("===================================");
         int[] labels = new int[multiclassMetrics.labels().length];
         for (int i = 0; i < labels.length; ++i) labels[i] = (int)multiclassMetrics.labels()[i];
-        System.out.println(multiclassMetrics.confusionMatrix());
+        //System.out.println(multiclassMetrics.confusionMatrix());
         out.print("\t");
         for (int i = 0; i < labels.length; ++i) out.print(labels[i] + "\t");
         out.println("Recall\tPrecision\tfMeasure");

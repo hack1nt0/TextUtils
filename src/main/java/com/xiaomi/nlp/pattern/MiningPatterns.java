@@ -7,9 +7,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
 
 /**
  * Created by DY on 15/2/28.
@@ -61,73 +59,100 @@ public class MiningPatterns {
     }
 
     public SmsPattern[] Patterns;
-    public List ToBeMine;
-    public int CorpusTotN;
-    public int MinSup;
-    public double SupRatio;
+    //public List ToBeMine;
+    //public int CorpusTotN;
+    public int MIN_SUP;
+    public double SUP_RATIO;
+    public int MAX_SAMPLE_ITR = 5;
+    ArrayList<SmsPattern> parsedCorpus = new ArrayList<SmsPattern>();
+    public Map<Integer, Integer> baseSupMap = new HashMap<Integer, Integer>();
+    public int NUM_THREAD = 2;
 
     public MiningPatterns(double supRatio) {
-        this.SupRatio = supRatio;
-        //this.SupRatio = 0.3;
+        this.SUP_RATIO = supRatio;
+        //this.SUP_RATIO = 0.3;
     }
 
     public MiningPatterns(String taskName, double supRatio) {
-        this.SupRatio = supRatio;
-        //this.SupRatio = 0.3;
+        this.SUP_RATIO = supRatio;
+        //this.SUP_RATIO = 0.3;
     }
 
-    public boolean inital(List<Line> lines) {
-        this.ToBeMine = lines;
-        this.CorpusTotN = lines.size();
-        Patterns = new SmsPattern[CorpusTotN * 2];
+    public void setMaxSampleItr(int MAX_SAMPLE_ITR) {
+        this.MAX_SAMPLE_ITR = MAX_SAMPLE_ITR;
+    }
 
-        for (int i = 0; i < lines.size(); ++i) {
-            String tmp = lines.get(i).getText().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
+    public void setSupRatio(double SUP_RATIO) {
+        this.SUP_RATIO = SUP_RATIO;
+    }
+
+    public boolean inital(List<Line> toBeMine) {
+        parsedCorpus.clear();
+        baseSupMap.clear();
+        for (int i = 0; i < toBeMine.size(); ++i) {
+            Line corpusM = toBeMine.get(i);
+            String tmp = corpusM.getText().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
             tmp += ";";
             SmsPattern sms = SmsPattern.getNew(tmp);
-            sms.baseSup = lines.get(i).getSupport();
+            baseSupMap.put(i, corpusM.getSupport());
+            //sms.addSource(i);
+            //sms.baseSup = corpusM.getSupport();
             sms.id = i;
             sms.corpusId = i;
-            Patterns[i] = sms;
+            parsedCorpus.add(sms);
         }
-        MinSup = (int)Math.ceil(ToBeMine.size() * SupRatio);
+        MIN_SUP = SUP_RATIO >= 1 ? (int)SUP_RATIO : (int)Math.ceil(toBeMine.size() * SUP_RATIO);
         return true;
-    }
-
-    private int patCnt = 0;
-    private List<SmsPattern> patternList = new ArrayList<SmsPattern>();
-    public void addText(String[] words, int sup) {
-        StringBuffer sb = new StringBuffer("");
-        for (String word: words) sb.append(word);
-        sb.append(";");
-        String line = sb.toString().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
-        SmsPattern sms = SmsPattern.getNew(line);
-        sms.baseSup = sup;
-        sms.id = patCnt;
-        sms.corpusId = patCnt;
-        patternList.add(sms);
-        ++patCnt;
     }
 
     //生成patterns
     public List<SmsPattern> getPatWithPosition() {
-        logger.info("class capacity(records): " + CorpusTotN);
+        int PARTITION_SIZE = (int)Math.sqrt(parsedCorpus.size());
+        if (PARTITION_SIZE == 0) return new ArrayList<SmsPattern>();
+        Patterns = new SmsPattern[PARTITION_SIZE * 4];
+        HashSet<SmsPattern> retSet = new HashSet<SmsPattern>();
+        for(int itr = 0; itr < MAX_SAMPLE_ITR; ++itr) {
+            HashMap<SmsPattern, Integer> itrRet = new HashMap<SmsPattern, Integer>();
+            Collections.shuffle(parsedCorpus);
+            for (SmsPattern smsPattern: parsedCorpus) smsPattern.reset();
 
-        MinSup = (int)Math.ceil(patCnt * SupRatio);
-        if (Patterns == null) {
-            Patterns = new SmsPattern[patternList.size() * 2];
-            for (int i = 0; i < patternList.size(); ++i) Patterns[i] = patternList.get(i);
-            patternList.clear();
+            int from = 0;
+            while (from < parsedCorpus.size()) {
+                int curPartN = parsedCorpus.size() - from < 2 * PARTITION_SIZE ?  parsedCorpus.size() - from : PARTITION_SIZE;
+                List<SmsPattern> partitionRet = getPatWithPosition(from, curPartN);
+                for (SmsPattern smsPattern: partitionRet) {
+                    int curSup = smsPattern.getSup(baseSupMap, from);
+                    itrRet.put(smsPattern, itrRet.containsKey(smsPattern) ? itrRet.get(smsPattern) + curSup : curSup);
+                }
+                from += curPartN;
+            }
+            for (SmsPattern smsPattern: itrRet.keySet()) {
+                int curSup = itrRet.get(smsPattern);
+                if (curSup < MIN_SUP || retSet.contains(smsPattern)) continue;
+                smsPattern.setFinalSup(curSup);
+                retSet.add(smsPattern);
+            }
         }
+        List<SmsPattern> ret = new ArrayList<SmsPattern>();
+        for (SmsPattern smsPattern: retSet) ret.add(smsPattern);
+        return ret;
+    }
+
+    //生成patterns
+    public List<SmsPattern> getPatWithPosition(int from, int PARTITION_SIZE) {
+
+        logger.info("class capacity(records): " + PARTITION_SIZE);
 
         List<SmsPattern> ret = new ArrayList<SmsPattern>();
 
-        for (int i = 0; i < CorpusTotN; ++i)
-            if (Patterns[i].getSup() >= MinSup) ret.add(Patterns[i]);
+        for (int i = 0; i < PARTITION_SIZE; ++i) {
+            Patterns[i] = parsedCorpus.get(i + from);
+            if (baseSupMap.get(i + from) >= MIN_SUP) ret.add(Patterns[i]);
+        }
 
-        if (CorpusTotN <= 1) return ret;
+        if (PARTITION_SIZE <= 1) return ret;
 
-        int MAXQUEUESIZE = MinSup * 10;
+        int MAX_QUEUE_SIZE = PARTITION_SIZE;
         /*
         PriorityQueue<SmsPattern> priQueueTmp = new PriorityQueue<SmsPattern>();
 
@@ -150,17 +175,23 @@ public class MiningPatterns {
         //Tbst<SmsPattern> priQueue = new Tbst<SmsPattern>();
         PriorityQueue<SmsPattern> priQueue = new PriorityQueue<SmsPattern>();
 
-        for (int i = 0; i < CorpusTotN; ++i) { // get Lcp of i and j
-            for (int j = i + 1; j < CorpusTotN; ++j) {
-                SmsPattern tmp = Patterns[i].getLctpWithFacade(Patterns[j]);
-                priQueue.add(tmp);
-                if (priQueue.size() > MAXQUEUESIZE) priQueue.poll();
+        for (int i = 0; i < PARTITION_SIZE; ++i) { // get Lcp of i and j
+            for (int j = i + 1; j < PARTITION_SIZE; ++j) {
+                SmsPattern smsPattern = Patterns[i].getLctpWithFacade(Patterns[j]);//todo array out of bounds
+                if (smsPattern == null) {
+                    logger.error("=========== smsPattern == null =====================");
+                    logger.error("left: " + Patterns[i].toString());
+                    logger.error("right: " + Patterns[j].toString());
+                    continue;
+                }
+                priQueue.add(smsPattern); //todo null pointer
+                if (priQueue.size() > MAX_QUEUE_SIZE) priQueue.poll();
             }
         }
         logger.info("Ended pair-wise Lctp extraction.");
 
 
-        for (int cur = CorpusTotN; cur < CorpusTotN * 2 - 1; ++cur) {
+        for (int cur = PARTITION_SIZE; cur < PARTITION_SIZE * 2 - 1; ++cur) {
             SmsPattern maxPattern = null;
             while (!priQueue.isEmpty()) {
                 maxPattern = priQueue.poll();
@@ -184,8 +215,15 @@ public class MiningPatterns {
             for (int i = 0; i < cur; ++i) {
                 if (i == maxPattern.lc.id || i == maxPattern.rc.id) continue;
                 //Lcp[i][cur] = getLcsp(smsPatterns[i], smsPatterns[cur]);
-                priQueue.add(Patterns[i].getLctpWithFacade(maxPattern));
-                if (priQueue.size() > MAXQUEUESIZE) priQueue.poll();
+                SmsPattern smsPattern = Patterns[i].getLctpWithFacade(maxPattern); //todo array out of bounds
+                if (smsPattern == null) {
+                    logger.error("=========== smsPattern == null =====================");
+                    logger.error("left: " + Patterns[i].toString());
+                    logger.error("right: " + maxPattern.toString());
+                    continue;
+                }
+                priQueue.add(smsPattern); //todo null pointer
+                if (priQueue.size() > MAX_QUEUE_SIZE) priQueue.poll();
             }
             logger.info("Ended generating new patterns from the maximal pattern.");
 
@@ -199,21 +237,23 @@ public class MiningPatterns {
 
             logger.info("Begin fulfilling the sourceIndex of the maximal pattern.");
             // cal sourceIndex
-            for (int i = 0; i < CorpusTotN; ++i) {
-                //todo optimize on time complexity
-                if (maxPattern.isSubpatOfFacade(Patterns[i])) {
+            for (int i = 0; i < PARTITION_SIZE; ++i) {
+                //todo optimize on time complexity, but harmful due to wildcard argumentation
+                //if (maxPattern.sourceIndex.get(i + from)) continue;
+                if (maxPattern.isSubpatOfFacade(Patterns[i])) {//todo array out of bounds
                     maxPattern.updWildcards();
-                    maxPattern.sourceIndex.add(Patterns[i]);
+                    //maxPattern.sourceIndex.add(Patterns[i]);
+                    maxPattern.addSource(i);
                 }
             }
             logger.info("Ended fulfilling the sourceIndex of the maximal pattern.");
-            if (maxPattern.getSup() < MinSup) continue;
+            //if (maxPattern.getSup(baseSupMap) < MIN_SUP) continue;
 
             logger.info("Begin deduplication of the ret");
             //deduplicate
             boolean repated = false;
             for (int i = 0; i < ret.size(); ++i) {
-                if (maxPattern.isSubstrOfFacade(ret.get(i)) && maxPattern.getSup() <= ret.get(i).getSup()) {
+                if (maxPattern.isSubstrOfFacade(ret.get(i)) && maxPattern.getSup(baseSupMap, from) <= ret.get(i).getSup(baseSupMap, from)) {
                     repated = true;
                     break;
                 }
@@ -235,3 +275,4 @@ public class MiningPatterns {
     }
 
 }
+
