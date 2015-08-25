@@ -23,14 +23,14 @@ class CommonCharacterTransformer(override val uid: String) extends Transformer {
   def setDict() = {
     val inputStream = CommonCharacterTransformer.getClass.getClassLoader.getResourceAsStream("com/xiaomi/nlp/classification/spamsms/common-chinese-char-3500.txt")
     val in = Source.fromInputStream(inputStream)
-    in.getLines().foreach(line => dict + line(0))
+    in.getLines().foreach(line => dict += line(0))
     this
   }
 
   def setDict(dictPath: String) = {
     val inputStream = CommonCharacterTransformer.getClass.getClassLoader.getResourceAsStream(dictPath)
     val in = Source.fromInputStream(inputStream)
-    in.getLines().foreach(line => dict + line(0))
+    in.getLines().foreach(line => dict += line(0))
     this
   }
 
@@ -54,6 +54,12 @@ class CommonCharacterTransformer(override val uid: String) extends Transformer {
     outputCol
   }
 
+  def cal(str: String): Double = {
+    println(str)
+    println(str.map(p => if (dict.contains(p) || p < 128) "_" else p).foldLeft("")((zero, p) => zero + p))
+    str.map(p => if (dict.contains(p) || p < 128) 1 else 0 ).reduce((x, y) => x + y) / (0.0 + str.length)
+  }
+
   override def transform(dataset: DataFrame): DataFrame = {
     val sqlfunc = udf((text: String) => if (text.length == 0) 0 else (text.count(p => dict.contains(p) || p < 128) / (0.0 + text.length))) //todo
     dataset.withColumn(outputCol, sqlfunc(dataset.col(inputCol)))
@@ -74,6 +80,6 @@ object CommonCharacterTransformer extends App {
     .map(p => p.trim().split(" "))
     .filter({case Array(id: String, ch: String) => id.toInt <= 3500})
     .foreach(p => out.println(p(1)(0)))
-  "，。！？；：［］（）、｛｝／《》@＃$＊＋－～".foreach(p => out.println(p))
+  "，。！？；：［］（）、｛｝／《》@＃$＊＋－～“”".foreach(p => out.println(p))
   out.close()
 }

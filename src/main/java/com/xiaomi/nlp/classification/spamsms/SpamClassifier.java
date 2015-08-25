@@ -110,6 +110,8 @@ public class SpamClassifier {
         PipelineModel gbtModel = pipeline.fit(trainData);
         trainData = gbtModel.transform(trainData);
         trainData.show();
+        //trainData.javaRDD().saveAsTextFile("data/ret/gbt-data.txt");
+        trainData.select("id", "comm_char_ratio", "nb_pred").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
 
         System.out.println(gbtModel.toString());
 
@@ -156,85 +158,6 @@ public class SpamClassifier {
                 }));
 
         printTabular(new MulticlassMetrics(predAndLabel.rdd()));
-
-                        /*
-                        JavaRDD < LabeledPoint > sms = (sc
-                                .repartition(NUM_THREAD)
-                                .map(new Function<String, LabeledPoint>() {
-                                    @Override
-                                    public LabeledPoint call(String v1) throws Exception {
-                                        JSONObject jsonObject = new JSONObject(v1);
-                                        String body = jsonObject.getString("body");
-                                        boolean isSpam = jsonObject.getBoolean("spam");
-                                        MyTokenizer myTokenizer = MyTokenizer.getInstance();
-                                        String[] tokens = myTokenizer.getTokens(body);
-
-                                        HashingTF hashingTF = new HashingTF();
-                                        Vector tf = hashingTF.transform(Arrays.asList(tokens));
-                                        LabeledPoint labeledPoint = new LabeledPoint(isSpam ? 1.0 : 0.0, tf);
-                                        return labeledPoint;
-                                    }
-                                }));
-
-        JavaRDD<LabeledPoint>[] splits = sms.randomSplit(new double[]{0.8, 0.2}, 11L);
-        JavaRDD<LabeledPoint> trainData = splits[0];
-        JavaRDD<LabeledPoint> testData = splits[1];
-        final NaiveBayesModel model = NaiveBayes.train(trainData.rdd(), 1.0);
-
-        JavaPairRDD<Object, Object> predAndLabel = testData.mapToPair(new PairFunction<LabeledPoint, Object, Object>() {
-            @Override
-            public Tuple2<Object, Object> call(LabeledPoint labeledPoint) throws Exception {
-                return new Tuple2<Object, Object>(model.predict(labeledPoint.features()), labeledPoint.label());
-            }
-        });
-
-        MulticlassMetrics multiclassMetrics = new MulticlassMetrics(predAndLabel.rdd());
-
-        printTabular(multiclassMetrics);
-
-        /*
-        Map<Double, int[]> tabular = (predAndLabel
-                .combineByKey(new Function<Double, int[]>() {
-                    @Override
-                    public int[] call(Double v1) throws Exception {
-                        int[] res = new int[NUM_CLASS];
-                        res[v1.intValue()] = 1;
-                        return res;
-                    }
-                }, new Function2<int[], Double, int[]>() {
-                    @Override
-                    public int[] call(int[] v1, Double v2) throws Exception {
-                        v1[v2.intValue()] += 1;
-                        return v1;
-                    }
-                }, new Function2<int[], int[], int[]>() {
-                    @Override
-                    public int[] call(int[] v1, int[] v2) throws Exception {
-                        for (int i = 0; i < v1.length; ++i) v1[i] += v2[i];
-                        return v1;
-                    }
-                })
-                .collectAsMap());
-
-        int[][] cnts = new int[tabular.size()][];
-        for (int i = 0; i < cnts.length; ++i) cnts[i] = tabular.get(i);
-        System.out.print("\t\t");
-        for (int i = 0; i < cnts.length; ++i) System.out.print(i + "\t");
-        System.out.println("Recall\t" + "Precision");
-        int matrixTot = 0;
-        int corTot = 0;
-        for (int i = 0; i < cnts.length; ++i) {
-            System.out.print(i + "\t");
-            int rowTot = 0;
-            for (int j = 0; j < cnts[i].length; ++j) {
-                rowTot += cnts[i][j];
-                System.out.print(cnts[i][j] + "\t");
-            }
-            matrixTot += rowTot;
-            corTot += cnts[i][i];
-            System.out.println(100.0 * cnts[i][i] / rowTot + "%" + "\t" + 100.0 * corTot / matrixTot + "%");
-        }
-        */
 
     }
 

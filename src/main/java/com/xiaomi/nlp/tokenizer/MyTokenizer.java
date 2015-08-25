@@ -78,6 +78,78 @@ public class MyTokenizer {
         return ret.toArray(new String[0]); //ToDO
     }
 
+    class WordWithDebugInfo {
+        String word;
+        String source = "HMM"; //or "Dict" or "ASCII"
+
+        public WordWithDebugInfo(String word) {
+            this.word = word;
+        }
+
+        public WordWithDebugInfo(String word, String source) {
+            this.source = source;
+            this.word = word;
+        }
+
+        @Override
+        public String toString() {
+            if (word.length() == 1) return word + "\tS\t" + source + "\n";
+            StringBuffer sb = new StringBuffer("");
+            for (int i = 0; i < word.length(); ++i) {
+                if (i == 0) sb.append(word.charAt(i) + "\tB\t" + source + "\n");
+                else if (i == word.length() - 1) sb.append(word.charAt(i) + "\tE\n");
+                else sb.append(word.charAt(i) + "\tM\n");
+            }
+            return sb.toString();
+        }
+    }
+
+    public WordWithDebugInfo[] getTokensWithDebugInfo(String text) {
+        List<WordWithDebugInfo> ret = new ArrayList<WordWithDebugInfo>();
+        char[] arr = text.toCharArray();
+        int N = arr.length;
+
+        Double[] dp = new Double[N + 1];
+        dp[N] = 0.0;
+        int[] nxt = new int[N + 1];
+        for (int i = N - 1; i >= 0; --i) nxt[i] = i + 1;
+        for (int i = N - 1; i >= 0; --i) {
+            dp[i] = dict.getMinLogFreq() * 2 + dp[i + 1];
+            //dp[i] = Double.NEGATIVE_INFINITY; todo no sense
+            for (int j = i + 1; j <= N; ++j) {
+                int index = dict.contains(arr, i, j);
+                if (index == -1) continue;
+                Double tmp = dict.getLogFreq(index) + dp[j];
+                if (tmp > dp[i]) {
+                    nxt[i] = j;
+                    dp[i] = tmp;
+                }
+            }
+        }
+        for (int i = 0; i < N;) {
+            if (nxt[i] == i + 1) {
+                int j = i;
+                for (; j < N && nxt[j] == j + 1; ++j);
+                for (int l = i, r = i; l < j;) {
+                    while (r < j && !isASCII(arr[r])) ++r;
+                    if (l < r) {
+                        for (String w: hmm.getTokens(arr, l, r))
+                        ret.add(new WordWithDebugInfo(w, "HMM"));
+                    }
+                    l = r;
+                    while (r < j && isASCII(arr[r])) ++r;
+                    if (l < r && l < j) ret.add(new WordWithDebugInfo(new String(arr, l, r - l), "ASCII"));
+                    l = r;
+                }
+                i = j;
+                continue;
+            }
+            ret.add(new WordWithDebugInfo(new String(arr, i, nxt[i] - i), "DICT"));
+            i = nxt[i];
+        }
+        return ret.toArray(new WordWithDebugInfo[0]);
+    }
+
     private boolean isASCII(char c) {
         return 0 <= c && c < 128;
     }
