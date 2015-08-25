@@ -6,7 +6,6 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
@@ -15,11 +14,9 @@ import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
 import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.mllib.evaluation.MulticlassMetrics;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.api.java.UDF1;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +24,6 @@ import scala.Tuple2;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -111,7 +107,7 @@ public class SpamClassifier {
         trainData = gbtModel.transform(trainData);
         trainData.show();
         //trainData.javaRDD().saveAsTextFile("data/ret/gbt-data.txt");
-        trainData.select("id", "comm_char_ratio", "nb_pred").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
+        trainData.select("id", "label", "comm_char_ratio", "nb_pred").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
 
         System.out.println(gbtModel.toString());
 
