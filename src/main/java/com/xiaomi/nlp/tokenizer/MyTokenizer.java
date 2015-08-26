@@ -269,17 +269,6 @@ class HMM {
         int M = R - L;
         boolean isHead = true;
         for (int i = 0; i < M;) {
-            while (i < M) {
-                boolean allGenProbMinInf = true; //text[i + L] is the head , or a uncommon char(not exist in model)
-                for (int j = 0; j < XN; ++j) if (Pxiyi[j][text[i + L]] > MINVALUE) allGenProbMinInf = false;
-                if (!allGenProbMinInf) break;
-                for (int j = 0; j < XN; ++j) {
-                    dp[i][j] = MINVALUE;
-                    if (i > 0) path[i][j] = dp[i - 1][1] > dp[i - 1][3] ? 1 : 3;
-                }
-                ++i;
-            }
-            if (i >= M) break;
             if (i == 0) {
                 for (int j = 0; j < XN; ++j) dp[i][j] = PPx[j] + Pxiyi[j][text[i + L]];
                 ++i;
@@ -306,7 +295,10 @@ class HMM {
             boolean allTotProbMinInf = true;
             for (int j = 0; j < XN; ++j) if (dp[i][j] > MINVALUE) allTotProbMinInf = false;
             if (allTotProbMinInf) {
-                for (int j = 0; j < XN; ++j) dp[i][j] = PPx[j] + Pxiyi[j][text[i + L]];
+                for (int j = 0; j < XN; ++j) {
+                    dp[i][j] = PPx[j] + Pxiyi[j][text[i + L]];
+                    if (i > 0) path[i][j] = dp[i - 1][1] >= dp[i - 1][3] ? 1 : 3;
+                }
             }
             ++i;
         }
