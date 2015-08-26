@@ -101,6 +101,7 @@ public class Utils {
         List<String> strsSymb = new ArrayList<String>();
         int len = 0;
         for(String s : strs){
+            if (s == null || s.length() == 0) continue; //todo dy
             len += s.length();
             int pos = 0, last = 0;
             boolean flag = Utils.isCommonChar(s.charAt(pos));

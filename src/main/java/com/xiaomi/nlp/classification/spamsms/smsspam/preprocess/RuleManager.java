@@ -35,8 +35,8 @@ public class RuleManager {
     public RuleManager() {
         if(null == mRulesPrevious){
             mRulesPrevious = new RulePrevious[]{
-                    new Url(),
-                    new Email(),
+                    //new Url(),
+                    //new Email(),
                     new Numbers(),
                    };
         }
