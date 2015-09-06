@@ -1,0 +1,78 @@
+# 所有限定词不能在中间泛化，加1的也不能在首尾泛化
+
+流量
+套餐
+剩余
+包
+上网
+国内
+当月
+省内
+含
+数据
+送
+包含
+共
+GPRS
+累计
+约
+通用
+套包
+全国
+总量
+总流量
+总和
+本月
+2G
+3G
+4G
+元
+话费
+余额
+开通
+订购
+赠送
+费
+帐
+费用
+可用
+消费
+每月
+超出
+欠费
+赠款
+返还
+扣
+额度
+合计
+透支
+金额
+低于
+通话费
+总额
+业务费
+缴纳
+小于
+验证码
+<FLOW> 1
+<MONEY> 1
+<TIME> 1
+<RESPONSE> 1
+<URL> 1
+<VERIFICATIONCODE> 1
+<SPECIALENTITY> 1
+<FLIGHTNUMBER> 1
+<AIRPORT> 1
+<LOCATION> 1
+<TRAIN_ORDER_NUMBER> 1
+<TRAIN_NUMBER> 1
+<TRAIN_STATION> 1
+<TIME_START> 1
+<TIME_END> 1
+<AIRPORT_START> 1
+<AIRPORT_DESTINATION> 1
+<TRAIN_STATION_START> 1
+<TRAIN_STATION_DESTINATION> 1
+<TRAIN_SEAT> 1
+<TRAIN_CARRIAGE_NUMBER> 1
+<TRAIN_SEAT_NUMBER> 1

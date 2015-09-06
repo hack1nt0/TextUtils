@@ -13,34 +13,26 @@ import java.util.List;
  * Created by dy on 14-11-20.
  */
 
-public class MyTokenizer implements ITokenizer {
-    private static MyTokenizer INSTANCE;
+public class MyTokenizer1 implements ITokenizer{
+    private static MyTokenizer1 INSTANCE;
     private static Dict dict;
-    private static HMM hmm;
+    private static HMM1 hmm;
     private static Logger logger = Logger.getLogger(MyTokenizer.class);
 
-    public static MyTokenizer getInstance() {
-        if (INSTANCE == null) INSTANCE = new MyTokenizer();
+    public static MyTokenizer1 getInstance() {
+        if (INSTANCE == null) INSTANCE = new MyTokenizer1();
         return INSTANCE;
     }
 
-    private MyTokenizer() {
+    private MyTokenizer1() {
         dict = new AlphabeticalOrderArray("com/xiaomi/nlp/tokenizer/jieba.dict.utf8.sorted");
-        hmm =  new HMM("com/xiaomi/nlp/tokenizer/hmm_model.utf8");
+        hmm =  new HMM1("com/xiaomi/nlp/tokenizer/hmm_model.utf8");
     }
 
-    protected MyTokenizer(String dictFilePath, String HMMFilePath) {
+    protected MyTokenizer1(String dictFilePath, String HMMFilePath) {
         dict = new AlphabeticalOrderArray(dictFilePath);
         //dict = new Trie(dictFilePath);
-        hmm = new HMM(HMMFilePath);
-    }
-
-    public static HMM getHmm() {
-        return hmm;
-    }
-
-    public static void setHmm(HMM hmm) {
-        MyTokenizer.hmm = hmm;
+        hmm = new HMM1(HMMFilePath);
     }
 
     public String[] getTokens(String text) {
@@ -101,9 +93,8 @@ public class MyTokenizer implements ITokenizer {
 
         @Override
         public String toString() {
+            if (word.length() == 1) return word + "\tS\t" + source + "\n";
             StringBuffer sb = new StringBuffer("");
-            sb.append("-----------\n");
-            if (word.length() == 1) return sb.append(word + "\tS\t" + source + "\n").toString();
             for (int i = 0; i < word.length(); ++i) {
                 if (i == 0) sb.append(word.charAt(i) + "\tB\t" + source + "\n");
                 else if (i == word.length() - 1) sb.append(word.charAt(i) + "\tE\n");
@@ -173,7 +164,7 @@ public class MyTokenizer implements ITokenizer {
     }
 }
 
-class HMM {
+class HMM1 {
     private static Logger logger = Logger.getLogger(HMM.class);
     int YN = Character.MAX_VALUE + 1;
     int XN = 4;
@@ -190,30 +181,27 @@ class HMM {
     };
     static double MINVALUE = -3.14e100;
 
-    public HMM(String filePath) {
+    public HMM1(String filePath) {
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(HMM.class.getClassLoader().getResourceAsStream(filePath)));
             long beforeM = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
             long beforeT = System.currentTimeMillis();
-
-            Arrays.fill(PPx, MINVALUE);
-            for (int i = 0; i < Pxixj.length; ++i) Arrays.fill(Pxixj[i], MINVALUE);
-            for (int i = 0; i < Pxiyi.length; ++i) Arrays.fill(Pxiyi[i], MINVALUE);
 
             while (true) {
                 String line = in.readLine();
                 if (line == null) break;
                 if (line.charAt(0) == '#') continue;
                 String[] tmp = line.split(" ");
-                for (int i = 0; i < PPx.length; ++i) PPx[i] = Math.max(PPx[i], Double.valueOf(tmp[i]));
+                for (int i = 0; i < PPx.length; ++i) PPx[i] = Double.valueOf(tmp[i]);
                 line = in.readLine();
                 for (int i = 0; i < XN; ++i) {
                     line = in.readLine();
                     tmp = line.split(" ");
-                    for (int j = 0; j < XN; ++j) Pxixj[i][j] = Math.max(Pxixj[i][j], Double.valueOf(tmp[j]));
+                    for (int j = 0; j < XN; ++j) Pxixj[i][j] = Double.valueOf(tmp[j]);
                 }
 
                 for (int i = 0; i < XN;) {
+                    Arrays.fill(Pxiyi[i], HMM.MINVALUE);
                     line = in.readLine();
                     if (line == null) break;
                     if (line.charAt(0) == '#') continue;
@@ -244,41 +232,21 @@ class HMM {
         }
     }
 
-    public void printTokenWithTransProb(String token, String xs) {
-        assert (token.length() == xs.length());
-        System.out.println("-----------");
-        double totFullProb = 0;
-        for (int i = 0;i < token.length(); ++i) {
-            int curX = decode.indexOf(xs.charAt(i));
-            if (i > 0) {
-                int preX = decode.indexOf(xs.charAt(i - 1));
-                System.out.println("\t\t" + Pxixj[preX][curX]);
-                totFullProb += Pxixj[preX][curX];
-            }
-            System.out.println(token.charAt(i) + "\t" + xs.charAt(i) + "\t" + Pxiyi[curX][token.charAt(i)]);
-            totFullProb += Pxiyi[curX][token.charAt(i)];
-        }
-        System.out.println("\t\t" + totFullProb);
-    }
-
     public List<String> getTokens(char[] text, int L, int R) {
-        if (dp == null || dp.length < text.length) dp = new double[text.length][XN];//todo amortized analysis
+        if (dp == null || dp.length < text.length) dp = new double[text.length][XN];
         if (path == null || path.length < text.length) path = new int[text.length][XN];
 
         List<String> ret = new ArrayList<String>();
         int M = R - L;
-        boolean isHead = true;
-        for (int i = 0; i < M;) {
+        //Arrays.fill(dp[M], 0.0);
+        for (int i = 0; i < M; ++i) {
             if (i == 0) {
                 for (int j = 0; j < XN; ++j) dp[i][j] = PPx[j] + Pxiyi[j][text[i + L]];
-                ++i;
                 continue;
             }
-
             for (int j = 0; j < XN; ++j) {
-                double res = MINVALUE;
+                Double res = HMM.MINVALUE;
                 for (int k = 0; k < XN; ++k) {
-                    if (dp[i - 1][k] <= MINVALUE || Pxixj[k][j] <= MINVALUE) continue;
                     //if (dp[i + 1][k] == HMM.MINVALUE || Pxixj[j][k] == HMM.MINVALUE) continue;
                     Double tmp = dp[i - 1][k] + Pxixj[k][j];
                     if (tmp > res) {
@@ -286,24 +254,18 @@ class HMM {
                         path[i][j] = k;
                     }
                 }
-                if (res <= MINVALUE) {
-                    path[i][j] = dp[i - 1][1] > dp[i - 1][3] ? 1 : 3;
+                if (res == HMM.MINVALUE || Pxiyi[j][text[i + L]] == HMM.MINVALUE) {
+                //if (res == HMM.MINVALUE) {
+                    //int maxPPxi = 0;
+                    //for (int k = 0; k < XN; ++k) if (PPx[maxPPxi] < PPx[k]) maxPPxi = k;
+                    path[i][j] = 1; //E
+                    //res = HMM.MINVALUE;
                 }
                 dp[i][j] = res + Pxiyi[j][text[i + L]];
             }
-
-            boolean allTotProbMinInf = true;
-            for (int j = 0; j < XN; ++j) if (dp[i][j] > MINVALUE) allTotProbMinInf = false;
-            if (allTotProbMinInf) {
-                for (int j = 0; j < XN; ++j) {
-                    dp[i][j] = PPx[j] + Pxiyi[j][text[i + L]];
-                    if (i > 0) path[i][j] = dp[i - 1][1] >= dp[i - 1][3] ? 1 : 3;
-                }
-            }
-            ++i;
         }
         //for (int i = 0; i < XN; ++i) dp[0][i] += PPx[i];
-        int xi = dp[M - 1][1] > dp[M - 1][3] ? 1 : 3;
+        int xi = dp[M - 1][1] <= dp[M - 1][3] ? 3 : 1;
         //for (int i = 0; i < XN; ++i) if (dp[0][i] > dp[0][xi]) xi = i;
 
         int[] xs = new int[M]; xs[M - 1] = xi;

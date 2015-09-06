@@ -6,8 +6,11 @@ import com.xiaomi.nlp.tokenizer.MyTokenizer;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import scala.reflect.runtime.SynchronizedSymbols;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by DY on 15/2/28.
@@ -23,7 +26,7 @@ public class MiningPatterns {
         logger.setLevel(Level.ERROR);
     }
 
-    public class Line {
+    public static class Line implements PatternMinable{
         String text;
         String[] tokens;
         int sup;
@@ -46,7 +49,20 @@ public class MiningPatterns {
             return text;
         }
 
-        public String[] getTokens() {
+        @Override
+        public String getCorpus() {
+            return getText();
+        }
+
+        @Override
+        public List<String> getTokens() {
+            if (tokens != null) return Arrays.asList(tokens);
+            MyTokenizer tokenizer = MyTokenizer.getInstance();
+            tokens = tokenizer.getTokens(text);
+            return Arrays.asList(tokens);
+        }
+
+        public String[] getTokensArr() {
             if (tokens != null) return tokens;
             MyTokenizer tokenizer = MyTokenizer.getInstance();
             tokens = tokenizer.getTokens(text);
@@ -67,11 +83,13 @@ public class MiningPatterns {
     ArrayList<SmsPattern> parsedCorpus = new ArrayList<SmsPattern>();
     public Map<Integer, Integer> baseSupMap = new HashMap<Integer, Integer>();
     public int NUM_THREAD = 2;
+    public boolean ENABLE_ARGUMENT_WILDCARD = true;
 
     public MiningPatterns(double supRatio) {
         this.SUP_RATIO = supRatio;
         //this.SUP_RATIO = 0.3;
     }
+
 
     public MiningPatterns(String taskName, double supRatio) {
         this.SUP_RATIO = supRatio;
@@ -86,12 +104,20 @@ public class MiningPatterns {
         this.SUP_RATIO = SUP_RATIO;
     }
 
-    public boolean inital(List<Line> toBeMine) {
+    public boolean isENABLE_ARGUMENT_WILDCARD() {
+        return ENABLE_ARGUMENT_WILDCARD;
+    }
+
+    public void setENABLE_ARGUMENT_WILDCARD(boolean ENABLE_ARGUMENT_WILDCARD) {
+        this.ENABLE_ARGUMENT_WILDCARD = ENABLE_ARGUMENT_WILDCARD;
+    }
+
+    public boolean inital(List<? extends PatternMinable> toBeMine) {
         parsedCorpus.clear();
         baseSupMap.clear();
         for (int i = 0; i < toBeMine.size(); ++i) {
-            Line corpusM = toBeMine.get(i);
-            String tmp = corpusM.getText().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
+            PatternMinable corpusM = toBeMine.get(i);
+            String tmp = corpusM.getCorpus().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
             tmp += ";";
             SmsPattern sms = SmsPattern.getNew(tmp);
             baseSupMap.put(i, corpusM.getSupport());
@@ -101,25 +127,28 @@ public class MiningPatterns {
             sms.corpusId = i;
             parsedCorpus.add(sms);
         }
-        MIN_SUP = SUP_RATIO >= 1 ? (int)SUP_RATIO : (int)Math.ceil(toBeMine.size() * SUP_RATIO);
+        MIN_SUP = SUP_RATIO > 1 ? (int)SUP_RATIO : (int)Math.ceil(toBeMine.size() * SUP_RATIO);
+        SUP_RATIO = SUP_RATIO <= 1 ? SUP_RATIO : SUP_RATIO / toBeMine.size();
         return true;
     }
 
-    //生成patterns
-    public List<SmsPattern> getPatWithPosition() {
-        int PARTITION_SIZE = (int)Math.sqrt(parsedCorpus.size());
+    public List<SmsPattern> getPatWithPositionByRandomPartitions() {
+        return getPatWithPositionByRandomPartitions(SUP_RATIO);
+    }
+
+    public List<SmsPattern> getPatWithPositionByRandomPartitions(double MIN_PARTITION_PAT_SUP_RATIO) {
+        int PARTITION_SIZE = (int)Math.sqrt(parsedCorpus.size()); //todo to find the optimistic one
         if (PARTITION_SIZE == 0) return new ArrayList<SmsPattern>();
-        Patterns = new SmsPattern[PARTITION_SIZE * 4];
+        //Patterns = new SmsPattern[PARTITION_SIZE * 4];
         HashSet<SmsPattern> retSet = new HashSet<SmsPattern>();
         for(int itr = 0; itr < MAX_SAMPLE_ITR; ++itr) {
             HashMap<SmsPattern, Integer> itrRet = new HashMap<SmsPattern, Integer>();
             Collections.shuffle(parsedCorpus);
             for (SmsPattern smsPattern: parsedCorpus) smsPattern.reset();
-
             int from = 0;
             while (from < parsedCorpus.size()) {
                 int curPartN = parsedCorpus.size() - from < 2 * PARTITION_SIZE ?  parsedCorpus.size() - from : PARTITION_SIZE;
-                List<SmsPattern> partitionRet = getPatWithPosition(from, curPartN);
+                List<SmsPattern> partitionRet = getPatWithPosition(from, curPartN, (int)(MIN_PARTITION_PAT_SUP_RATIO * curPartN));
                 for (SmsPattern smsPattern: partitionRet) {
                     int curSup = smsPattern.getSup(baseSupMap, from);
                     itrRet.put(smsPattern, itrRet.containsKey(smsPattern) ? itrRet.get(smsPattern) + curSup : curSup);
@@ -138,15 +167,65 @@ public class MiningPatterns {
         return ret;
     }
 
-    //生成patterns
-    public List<SmsPattern> getPatWithPosition(int from, int PARTITION_SIZE) {
+    public List<SmsPattern> getPatWithPositionWithMultiThread(int NUM_THREAD, double MIN_PARTITION_PAT_SUP_RATIO) {
+        int PARTITION_SIZE = (int)Math.sqrt(parsedCorpus.size()); //todo to find the optimistic one
+        if (PARTITION_SIZE == 0) return new ArrayList<SmsPattern>();
+        //Patterns = new SmsPattern[parsedCorpus.size() * 2];
+        ExecutorService threadPool = Executors.newFixedThreadPool(NUM_THREAD);
+        HashSet<SmsPattern> retSet = new HashSet<SmsPattern>();
+        final double MIN_PARTITION_PAT_SUP_RATIO_FINAL = MIN_PARTITION_PAT_SUP_RATIO;
+        for(int itr = 0; itr < MAX_SAMPLE_ITR; ++itr) {
+            final Map<SmsPattern, Integer> itrRet = Collections.synchronizedMap(new HashMap<SmsPattern, Integer>());
+            Collections.shuffle(parsedCorpus);
+            for (SmsPattern smsPattern: parsedCorpus) smsPattern.reset();
 
+            final int[] from = new int[]{0};
+            while (from[0] < parsedCorpus.size()) {
+                final int[] curPartN = new int[]{parsedCorpus.size() - from[0] < 2 * PARTITION_SIZE ?  parsedCorpus.size() - from[0] : PARTITION_SIZE};
+                threadPool.execute(new Thread() {
+                    @Override
+                    public void run() {
+                        List<SmsPattern> partitionRet = getPatWithPosition(from[0], curPartN[0], (int)(MIN_PARTITION_PAT_SUP_RATIO_FINAL * curPartN[0]));
+                        for (SmsPattern smsPattern: partitionRet) {
+                            int curSup = smsPattern.getSup(baseSupMap, from[0]);
+                            itrRet.put(smsPattern, itrRet.containsKey(smsPattern) ? itrRet.get(smsPattern) + curSup : curSup);
+                        }
+                    }
+                });
+
+                from[0] += curPartN[0];
+            }
+            for (SmsPattern smsPattern: itrRet.keySet()) {
+                int curSup = itrRet.get(smsPattern);
+                if (curSup < MIN_SUP || retSet.contains(smsPattern)) continue;
+                smsPattern.setFinalSup(curSup);
+                retSet.add(smsPattern);
+            }
+        }
+        List<SmsPattern> ret = new ArrayList<SmsPattern>();
+        for (SmsPattern smsPattern: retSet) ret.add(smsPattern);
+        return ret;
+    }
+
+    public List<SmsPattern> getPatWithPositionMultiThread(int NUM_THREAD) {
+        return getPatWithPositionWithMultiThread(NUM_THREAD, SUP_RATIO);
+    }
+
+    public List<SmsPattern> getPatWithPosition() {
+        List<SmsPattern> res = getPatWithPosition(0, parsedCorpus.size(), MIN_SUP);
+        for (SmsPattern smsPattern: res) smsPattern.setFinalSup(smsPattern.getSup(baseSupMap, 0));
+        return res;
+    }
+
+    //生成patterns
+    public List<SmsPattern> getPatWithPosition(int from, int PARTITION_SIZE, int MIN_PARTITION_PAT_SUP) {
         logger.info("class capacity(records): " + PARTITION_SIZE);
 
         List<SmsPattern> ret = new ArrayList<SmsPattern>();
-
+        Patterns = new SmsPattern[PARTITION_SIZE * 2];
         for (int i = 0; i < PARTITION_SIZE; ++i) {
             Patterns[i] = parsedCorpus.get(i + from);
+            Patterns[i].addSource(i);
             if (baseSupMap.get(i + from) >= MIN_SUP) ret.add(Patterns[i]);
         }
 
@@ -183,6 +262,10 @@ public class MiningPatterns {
                     logger.error("left: " + Patterns[i].toString());
                     logger.error("right: " + Patterns[j].toString());
                     continue;
+                }
+                if (!ENABLE_ARGUMENT_WILDCARD) {
+                    smsPattern.addSource(i);
+                    smsPattern.addSource(j);
                 }
                 priQueue.add(smsPattern); //todo null pointer
                 if (priQueue.size() > MAX_QUEUE_SIZE) priQueue.poll();
@@ -222,6 +305,10 @@ public class MiningPatterns {
                     logger.error("right: " + maxPattern.toString());
                     continue;
                 }
+                if (!ENABLE_ARGUMENT_WILDCARD) {
+                    smsPattern.addSource(Patterns[i].sourceIndex);
+                    smsPattern.addSource(maxPattern.sourceIndex);
+                }
                 priQueue.add(smsPattern); //todo null pointer
                 if (priQueue.size() > MAX_QUEUE_SIZE) priQueue.poll();
             }
@@ -240,14 +327,15 @@ public class MiningPatterns {
             for (int i = 0; i < PARTITION_SIZE; ++i) {
                 //todo optimize on time complexity, but harmful due to wildcard argumentation
                 //if (maxPattern.sourceIndex.get(i + from)) continue;
+                if (!ENABLE_ARGUMENT_WILDCARD && maxPattern.sourceIndex.get(i)) continue;
                 if (maxPattern.isSubpatOfFacade(Patterns[i])) {//todo array out of bounds
-                    maxPattern.updWildcards();
+                    if (ENABLE_ARGUMENT_WILDCARD) maxPattern.updWildcards();
                     //maxPattern.sourceIndex.add(Patterns[i]);
                     maxPattern.addSource(i);
                 }
             }
             logger.info("Ended fulfilling the sourceIndex of the maximal pattern.");
-            //if (maxPattern.getSup(baseSupMap) < MIN_SUP) continue;
+            if (maxPattern.getSup(baseSupMap, from) < MIN_PARTITION_PAT_SUP) continue;
 
             logger.info("Begin deduplication of the ret");
             //deduplicate
