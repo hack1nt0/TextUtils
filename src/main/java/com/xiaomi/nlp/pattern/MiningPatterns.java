@@ -6,7 +6,6 @@ import com.xiaomi.nlp.tokenizer.MyTokenizer;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import scala.reflect.runtime.SynchronizedSymbols;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -117,7 +116,17 @@ public class MiningPatterns {
         baseSupMap.clear();
         for (int i = 0; i < toBeMine.size(); ++i) {
             PatternMinable corpusM = toBeMine.get(i);
+
             String tmp = corpusM.getCorpus().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
+            //squeeze consecutive space to one
+            char[] tmpChars = tmp.toCharArray();
+            int actualLen = 0;
+            for (int k = 0; k < tmpChars.length;) {
+                if (tmpChars[k] != ' ') {tmpChars[actualLen++] = tmpChars[k++]; continue;}
+                ++actualLen;
+                while (k < tmpChars.length && tmpChars[k++] == ' ');
+            }
+            tmp = new String(tmpChars, 0, actualLen);
             tmp += ";";
             SmsPattern sms = SmsPattern.getNew(tmp);
             baseSupMap.put(i, corpusM.getSupport());
