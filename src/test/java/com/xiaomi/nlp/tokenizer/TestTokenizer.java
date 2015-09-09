@@ -37,7 +37,7 @@ public class TestTokenizer {
 
     @Test //how to deal with punctuation
     public void testTag() {
-        String str = "刘黑虎道：";
+        String str = "刘黑虎道：daiyang@xiaomi.com";
         MyTokenizer tokenizer = MyTokenizer.getInstance();
         MyTokenizer.WordWithDebugInfo[] tokens = tokenizer.getTokensWithDebugInfo(str);
         for (MyTokenizer.WordWithDebugInfo w: tokens) System.out.print(w);

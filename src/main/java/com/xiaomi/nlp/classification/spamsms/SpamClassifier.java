@@ -27,7 +27,6 @@ import scala.Tuple2;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by dy on 15-8-13.
@@ -70,6 +69,7 @@ public class SpamClassifier {
 
         DataFrame trainData = sqlContext.createDataFrame(splits[0], LabeledDocument.class);
         //ML pipeline
+        UrlTransformer urlTransformer = new UrlTransformer().setInputCol("text").setOutputCol("text");
         CommonCharacterTransformer ccratio = new CommonCharacterTransformer().setDict().setInputCol("text").setOutputCol("comm_char_ratio");
         Tokenizer tokenizer = new ChiTokenizer(MyTokenizer.getInstance()).setInputCol("text").setOutputCol("tokens");
         Tokenizer tokenizer1 = new ChiTokenizer(MyTokenizer1.getInstance()).setInputCol("text").setOutputCol("tokens");
@@ -79,7 +79,7 @@ public class SpamClassifier {
         NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
                 .setInputCols(new String[]{"label", hashingTF.getOutputCol()})
                 .setOutputCol("nb_pred");
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator});
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{urlTransformer, ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator});
         PipelineModel nbModel = pipeline.fit(trainData);
         Pipeline pipeline1 = new Pipeline().setStages(new PipelineStage[]{ccratio, tokenizer1, hashingTF, idf, naiveBayesEstimator});
         PipelineModel nbModel1 = pipeline1.fit(trainData);
@@ -87,7 +87,7 @@ public class SpamClassifier {
         trainData.show();
 
         VectorAssembler gbtFeatAssembler = new VectorAssembler()
-                .setInputCols(new String[]{naiveBayesEstimator.getOutputCol(), ccratio.getOutputCol()})
+                .setInputCols(new String[]{ccratio.getOutputCol(), naiveBayesEstimator.getOutputCol()})
                 .setOutputCol("gbt_feat");
 
         GBTEstimator gbtEstimator = new GBTEstimator()
@@ -102,8 +102,10 @@ public class SpamClassifier {
         PipelineModel gbtModel = pipeline.fit(trainData);
         trainData = gbtModel.transform(trainData);
         trainData.show();
-        //trainData.javaRDD().saveAsTextFile("data/ret/gbt-data.txt");
+        trainData.select("text", "tokens").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
         //trainData.select("id", "label", "comm_char_ratio", "nb_pred").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
+
+        System.out.println(gbtModel.toString());
 
         String finalPred = gbtEstimator.getOutputCol();
         //test
