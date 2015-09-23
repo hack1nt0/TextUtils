@@ -1,7 +1,6 @@
 package com.xiaomi.nlp.classification.spamsms;
 
 import com.xiaomi.nlp.tokenizer.MyTokenizer;
-import com.xiaomi.nlp.tokenizer.MyTokenizer1;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -39,7 +38,7 @@ public class SpamClassifier {
         final SparkConf conf = new SparkConf().setAppName("NewtechSmsPatternLearning-" + TASK_NAME);
         conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
         conf.set("spark.kryo.registrator", "com.xiaomi.nlp.classification.spamsms.CDSKryoRegister");
-        conf.registerKryoClasses(new Class[]{MyTokenizer.class, MyTokenizer1.class});
+        conf.registerKryoClasses(new Class[]{MyTokenizer.class});
         conf.setIfMissing("spark.master", "local[" + NUM_THREAD + "]");
         final JavaSparkContext sc = new JavaSparkContext(conf);
         final SQLContext sqlContext = new SQLContext(sc);
@@ -72,7 +71,6 @@ public class SpamClassifier {
         UrlTransformer urlTransformer = new UrlTransformer().setInputCol("text").setOutputCol("text");
         CommonCharacterTransformer ccratio = new CommonCharacterTransformer().setDict().setInputCol("text").setOutputCol("comm_char_ratio");
         Tokenizer tokenizer = new ChiTokenizer(MyTokenizer.getInstance()).setInputCol("text").setOutputCol("tokens");
-        Tokenizer tokenizer1 = new ChiTokenizer(MyTokenizer1.getInstance()).setInputCol("text").setOutputCol("tokens");
 
         HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("tf");
         IDF idf = new IDF().setInputCol(hashingTF.getOutputCol()).setOutputCol("tf_idf");
@@ -81,8 +79,6 @@ public class SpamClassifier {
                 .setOutputCol("nb_pred");
         Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{urlTransformer, ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator});
         PipelineModel nbModel = pipeline.fit(trainData);
-        Pipeline pipeline1 = new Pipeline().setStages(new PipelineStage[]{ccratio, tokenizer1, hashingTF, idf, naiveBayesEstimator});
-        PipelineModel nbModel1 = pipeline1.fit(trainData);
         trainData = nbModel.transform(trainData);
         trainData.show();
 
@@ -112,7 +108,6 @@ public class SpamClassifier {
         DataFrame testData = sqlContext.createDataFrame(splits[1], LabeledDocument.class);
 
         DataFrame predictions0 = nbModel.transform(testData);
-        DataFrame predictions0_1 = nbModel1.transform(testData);
         /*
         for (Row r: predictions0.select("id", "text", "label", finalPred).collect()) {
             System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
@@ -131,19 +126,6 @@ public class SpamClassifier {
                 }));
 
         printTabular(new MulticlassMetrics(predAndLabel0.rdd()));
-
-
-        JavaPairRDD<Object, Object> predAndLabel0_1 = (predictions0_1
-                .select("nb_pred", "label")
-                .javaRDD()
-                .mapToPair(new PairFunction<Row, Object, Object>() {
-                    @Override
-                    public Tuple2<Object, Object> call(Row row) throws Exception {
-                        return new Tuple2<Object, Object>(row.get(0), row.get(1));
-                    }
-                }));
-
-        printTabular(new MulticlassMetrics(predAndLabel0_1.rdd()));
 
         DataFrame predictions = gbtModel.transform(nbModel.transform(testData));
         /*

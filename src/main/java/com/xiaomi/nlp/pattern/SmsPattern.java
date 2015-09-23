@@ -404,7 +404,15 @@ class Token extends SmsPattern {
 class OrdSent extends SmsPattern {
     //public static String DELIMITER = ",";
     public final static OrdSent EMPTY_ORDSENT = new OrdSent();
+    public String punc;
 
+    public String getPunc() {
+        return punc;
+    }
+
+    public void setPunc(String punc) {
+        this.punc = punc;
+    }
 
     @Override
     public boolean isSubstrOf(SmsPattern other) {

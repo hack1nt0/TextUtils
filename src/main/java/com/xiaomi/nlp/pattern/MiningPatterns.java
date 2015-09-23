@@ -2,6 +2,8 @@ package com.xiaomi.nlp.pattern;
 
 //import org.apache.commons.math3.analysis.function.Min;
 
+import com.xiaomi.nlp.tokenizer.HMMSentSeg;
+import com.xiaomi.nlp.tokenizer.ISentSeg;
 import com.xiaomi.nlp.tokenizer.MyTokenizer;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -128,7 +130,16 @@ public class MiningPatterns {
             }
             tmp = new String(tmpChars, 0, actualLen);
             tmp += ";";
-            SmsPattern sms = SmsPattern.getNew(tmp);
+            ISentSeg sentSeg = new HMMSentSeg();
+            List<ISentSeg.Sentence> sents = sentSeg.getSents(tmp);
+            SmsPattern sms = new Sms();
+            for (ISentSeg.Sentence sent: sents) {
+                OrdSent ordSent = new OrdSent();
+                for (String token : sent.words) ordSent.add(new Token(token));
+                ordSent.setPunc(sent.punc);
+                sms.add(ordSent);
+            }
+            //SmsPattern sms = SmsPattern.getNew(tmp);
             baseSupMap.put(i, corpusM.getSupport());
             //sms.addSource(i);
             //sms.baseSup = corpusM.getSupport();

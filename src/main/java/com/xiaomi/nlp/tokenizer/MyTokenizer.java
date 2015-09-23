@@ -86,7 +86,7 @@ public class MyTokenizer implements ITokenizer {
         return ret.toArray(new String[0]); //ToDO
     }
 
-    class WordWithDebugInfo {
+    public static class WordWithDebugInfo {
         String word;
         String source = "HMM"; //or "Dict" or "ASCII"
 

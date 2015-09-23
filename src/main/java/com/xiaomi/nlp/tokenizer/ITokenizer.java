@@ -7,6 +7,5 @@ import java.io.Serializable;
  */
 public interface ITokenizer extends Serializable {
     public static final long serialVersionUID = 11L;
-
     public String[] getTokens(String text);
 }
