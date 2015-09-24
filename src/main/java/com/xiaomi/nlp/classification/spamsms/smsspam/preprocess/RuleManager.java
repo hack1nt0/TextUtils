@@ -120,7 +120,7 @@ public class RuleManager {
         List<String> splits = cps.getProccessedSplits();
         Set<String> segsList = new TreeSet<String>();
         for(String split : splits){
-            String[] segs = mSeg.getTokens(split);
+            String[] segs = mSeg.getTokens(split).toArray(new String[0]);
             for(String seg : segs){
                 if(Utils.allChineseChar(seg) || mSeg.inDict(seg)){
                     segsList.add(seg);

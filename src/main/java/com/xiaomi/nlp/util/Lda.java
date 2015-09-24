@@ -35,7 +35,7 @@ public class Lda {
                 String line = in.readLine();
                 if (line == null) break;
                 String text = line.split("\\t")[2];
-                docs.add(Arrays.asList(tokenizer.getTokens(text)));
+                docs.add(tokenizer.getTokens(text));
             }
         } catch (IOException e) {
             e.printStackTrace();

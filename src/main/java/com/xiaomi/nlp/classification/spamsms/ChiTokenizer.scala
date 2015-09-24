@@ -9,6 +9,7 @@ import org.apache.spark.ml.feature.Tokenizer
 class ChiTokenizer(val innerTokenizer: ITokenizer) extends Tokenizer{
 
   override protected def createTransformFunc: String => Seq[String] = {
-    text => innerTokenizer.getTokens(text)
+    //text => innerTokenizer.getTokens(text)
+    text => Seq()
   }
 }

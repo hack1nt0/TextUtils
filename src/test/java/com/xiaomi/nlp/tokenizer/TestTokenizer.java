@@ -3,6 +3,7 @@ package com.xiaomi.nlp.tokenizer;
 import org.junit.Test;
 
 import java.io.*;
+import java.util.List;
 
 /**
  * Created by dy on 15-8-6.
@@ -39,7 +40,7 @@ public class TestTokenizer {
     public void testTag() {
         String str = "刘黑虎道：daiyang@xiaomi.com";
         MyTokenizer tokenizer = MyTokenizer.getInstance();
-        MyTokenizer.WordWithDebugInfo[] tokens = tokenizer.getTokensWithDebugInfo(str);
+        List<MyTokenizer.WordWithDebugInfo> tokens = tokenizer.getTokensWithDebugInfo(str);
         for (MyTokenizer.WordWithDebugInfo w: tokens) System.out.print(w);
         tokenizer.getHmm().printTokenWithTransProb(str, "BMMES");
         tokenizer.getHmm().printTokenWithTransProb(str, "BMESS");

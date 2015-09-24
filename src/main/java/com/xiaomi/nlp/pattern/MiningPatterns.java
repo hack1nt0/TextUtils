@@ -29,7 +29,7 @@ public class MiningPatterns {
 
     public static class Line implements PatternMinable{
         String text;
-        String[] tokens;
+        List<String> tokens;
         int sup;
 
         public Line(String text, int sup) {
@@ -37,7 +37,7 @@ public class MiningPatterns {
             this.sup = sup;
         }
 
-        public Line(String[] tokens, int sup) {
+        public Line(List<String> tokens, int sup) {
             this.tokens = tokens;
             this.sup = sup;
         }
@@ -57,17 +57,17 @@ public class MiningPatterns {
 
         @Override
         public List<String> getTokens() {
-            if (tokens != null) return Arrays.asList(tokens);
-            MyTokenizer tokenizer = MyTokenizer.getInstance();
-            tokens = tokenizer.getTokens(text);
-            return Arrays.asList(tokens);
-        }
-
-        public String[] getTokensArr() {
             if (tokens != null) return tokens;
             MyTokenizer tokenizer = MyTokenizer.getInstance();
             tokens = tokenizer.getTokens(text);
             return tokens;
+        }
+
+        public String[] getTokensArr() {
+            if (tokens != null) return tokens.toArray(new String[0]);
+            MyTokenizer tokenizer = MyTokenizer.getInstance();
+            tokens = tokenizer.getTokens(text);
+            return tokens.toArray(new String[0]);
         }
 
         public int getSupport() {
@@ -119,7 +119,8 @@ public class MiningPatterns {
         for (int i = 0; i < toBeMine.size(); ++i) {
             PatternMinable corpusM = toBeMine.get(i);
 
-            String tmp = corpusM.getCorpus().replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
+            String tmp = corpusM.getCorpus();
+            //tmp = tmp.replace("rn", ";").replace("\\r\\n", ";").replace("\\n", ";").replace(",", ",,").replace("，", "，，");
             //squeeze consecutive space to one
             char[] tmpChars = tmp.toCharArray();
             int actualLen = 0;
@@ -129,14 +130,14 @@ public class MiningPatterns {
                 while (k < tmpChars.length && tmpChars[k++] == ' ');
             }
             tmp = new String(tmpChars, 0, actualLen);
-            tmp += ";";
+            //tmp += ";";
             ISentSeg sentSeg = new HMMSentSeg();
             List<ISentSeg.Sentence> sents = sentSeg.getSents(tmp);
             SmsPattern sms = new Sms();
             for (ISentSeg.Sentence sent: sents) {
                 OrdSent ordSent = new OrdSent();
                 for (String token : sent.words) ordSent.add(new Token(token));
-                ordSent.setPunc(sent.punc);
+                ordSent.punc = sent.punc;
                 sms.add(ordSent);
             }
             //SmsPattern sms = SmsPattern.getNew(tmp);

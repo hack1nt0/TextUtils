@@ -36,4 +36,20 @@ public class TestPattern {
         }
 
     }
+
+    @Test
+    public void testRawString() {
+        String[] strs = new String[]{
+                "A，B",
+                "A。B",
+                "A！B",
+        };
+        List<MiningPatterns.Line> initialList = new ArrayList<MiningPatterns.Line>();
+        for (String str: strs) initialList.add(new MiningPatterns.Line(str, 1));
+        MiningPatterns miningPatterns = new MiningPatterns(0.8);
+        miningPatterns.inital(initialList);
+        for (SmsPattern pattern: miningPatterns.getPatWithPosition()) {
+            System.out.println(pattern.getSup() + "\t" + pattern.toString());
+        }
+    }
 }

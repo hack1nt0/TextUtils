@@ -286,6 +286,9 @@ public class SmsPatterns {
 
             j = Path[i][j];
         }
+
+        if (A.puncWildcards == null) A.puncWildcards = new HashSet<String>();
+        A.puncWildcards.add(B.punc);
         return true;
     }
 

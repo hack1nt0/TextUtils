@@ -35,9 +35,11 @@ public abstract class SmsPattern implements Comparable<SmsPattern> {
     public boolean used = false;
     //public int baseSup;
     public SmsPattern origin;//pattern's origin(for the purpose of updating the wildcards)
-
     //for hashCode and equals
     public String plainString;
+    public HashSet<String> puncWildcards; //for the purpose of acc the puncs
+    public String punc;
+    public boolean ENABLE_PRINT_WILDCARDS_CONTENT = false;
 
     public void reset() {
         used = false;
@@ -404,7 +406,6 @@ class Token extends SmsPattern {
 class OrdSent extends SmsPattern {
     //public static String DELIMITER = ",";
     public final static OrdSent EMPTY_ORDSENT = new OrdSent();
-    public String punc;
 
     public String getPunc() {
         return punc;
@@ -446,18 +447,30 @@ class OrdSent extends SmsPattern {
     public String toString() {
         //if (this.size() == 0) return "<Empty OrdSent>+";
         //StringBuffer res = new StringBuffer("<ordSent>");
-        if (this.size() == 0) return "[]";
-        StringBuffer res = new StringBuffer("\"");
+        if (this.size() == 0) {
+            return "[]";
+        }
+        StringBuffer res = new StringBuffer("\"");//distinct the ',' of sms content from the split ',' of ArrayList toString show;
         for (int i = 0; i <= this.size(); ++i) {
             if (wildcards != null && wildcards.containsKey(i) && wildcards.get(i).size() > 1) {
                 res.append("<*: ");
-//                for (String candW : wildcards.get(i).keySet())
-//                    res.append(candW).append("|");
+                if (ENABLE_PRINT_WILDCARDS_CONTENT) {
+                    for (String candW : wildcards.get(i).keySet())
+                        res.append(candW).append("|");
+                }
                 res.replace(res.length() - 1, res.length(), ">");
             }
             if (i < this.size()) res.append(this.get(i));
         }
         //res.append("</ordSent>");
+        if (puncWildcards != null) {
+            res.append("<PUNC*: ");
+            for (String candW : puncWildcards)
+                res.append(candW).append("|");
+            res.replace(res.length() - 1, res.length(), ">");
+        } else {
+            res.append(this.punc);
+        }
         res.append("\"");
         //res.append(DELIMITER);
         return res.toString();
@@ -521,13 +534,23 @@ class ColonSent extends SmsPattern {
         for (int i = 0; i <= this.size(); ++i) {
             if (wildcards != null && wildcards.containsKey(i) && wildcards.get(i).size() > 1) {
                 res.append("<*: ");
-//                for (String candW : wildcards.get(i).keySet())
-//                    res.append(candW).append("|");
+                if (ENABLE_PRINT_WILDCARDS_CONTENT) {
+                    for (String candW : wildcards.get(i).keySet())
+                        res.append(candW).append("|");
+                }
                 res.replace(res.length() - 1, res.length(), ">");
             }
             if (i < this.size()) res.append(this.get(i));
         }
-        res.append(COLONNORM);
+        //res.append(COLONNORM);
+        if (puncWildcards != null) {
+            res.append("<PUNC*: ");
+            for (String candW : puncWildcards)
+                res.append(candW).append("|");
+            res.replace(res.length() - 1, res.length(), ">");
+        } else {
+            res.append(this.punc);
+        }
         res.append("\"");
         //res.append(",");
         //res.append("</colonSent>");

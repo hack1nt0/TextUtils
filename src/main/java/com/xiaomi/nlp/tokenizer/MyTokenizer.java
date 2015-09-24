@@ -1,5 +1,6 @@
 package com.xiaomi.nlp.tokenizer;
 
+import com.xiaomi.nlp.util.ACAutomation;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -18,6 +19,23 @@ public class MyTokenizer implements ITokenizer {
     private static Dict dict;
     private static HMM hmm;
     private static Logger logger = Logger.getLogger(MyTokenizer.class);
+    private static ACAutomation acAutomation;
+    private static String strongDictPath = "com/xiaomi/nlp/tokenizer/strong-dict.txt";
+    private static List<String> ps = new ArrayList<String>();
+
+    static {
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(MyTokenizer.class.getClassLoader().getResourceAsStream(strongDictPath)));
+            while (true) {
+                String line = in.readLine();
+                if (line == null) break;
+                ps.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        acAutomation = new ACAutomation(ps);
+    }
 
     public static MyTokenizer getInstance() {
         if (INSTANCE == null) INSTANCE = new MyTokenizer();
@@ -43,47 +61,95 @@ public class MyTokenizer implements ITokenizer {
         MyTokenizer.hmm = hmm;
     }
 
-    public String[] getTokens(String text) {
-        List<String> ret = new ArrayList<String>();
-        char[] arr = text.toCharArray();
-        int N = arr.length;
+    private static String lBrackets = "【[(<";
+    private static String rBrackets = "】])>";
 
-        Double[] dp = new Double[N + 1];
-        dp[N] = 0.0;
-        int[] nxt = new int[N + 1];
-        for (int i = N - 1; i >= 0; --i) nxt[i] = i + 1;
-        for (int i = N - 1; i >= 0; --i) {
-            dp[i] = dict.getMinLogFreq() * 2 + dp[i + 1];
-            //dp[i] = Double.NEGATIVE_INFINITY; todo no sense
-            for (int j = i + 1; j <= N; ++j) {
-                int index = dict.contains(arr, i, j);
-                if (index == -1) continue;
-                Double tmp = dict.getLogFreq(index) + dp[j];
-                if (tmp > dp[i]) {
-                    nxt[i] = j;
-                    dp[i] = tmp;
+    private List<WordWithDebugInfo> extractTextInBrackets(String text) {
+        List<WordWithDebugInfo> res = new ArrayList<WordWithDebugInfo>();
+        StringBuffer buf = new StringBuffer();
+        boolean findL = false;
+        for (int i = 0; i < text.length(); ++i) {
+            char c = text.charAt(i);
+            if (!findL && lBrackets.indexOf(c) >= 0) {
+                findL = true;
+                if (buf.length() > 0) {
+                    res.add(new WordWithDebugInfo(buf.toString()));
+                    buf.setLength(0);
                 }
-            }
-        }
-        for (int i = 0; i < N;) {
-            if (nxt[i] == i + 1) {
-                int j = i;
-                for (; j < N && nxt[j] == j + 1; ++j);
-                for (int l = i, r = i; l < j;) {
-                    while (r < j && !isASCII(arr[r])) ++r;
-                    if (l < r) ret.addAll(hmm.getTokens(arr, l, r));
-                    l = r;
-                    while (r < j && isASCII(arr[r])) ++r;
-                    if (l < r && l < j) ret.add(new String(arr, l, r - l));
-                    l = r;
-                }
-                i = j;
+                buf.append(c);
                 continue;
             }
-            ret.add(new String(arr, i, nxt[i] - i));
-            i = nxt[i];
+            buf.append(c);
+            if (findL && rBrackets.indexOf(c) >= 0)  {
+                findL = false;
+                res.add(new WordWithDebugInfo(buf.toString(), "BRACKET"));
+                buf.setLength(0);
+                continue;
+            }
+            if (i == text.length() - 1 && buf.length() > 0) {
+                res.add(new WordWithDebugInfo(buf.toString()));
+            }
         }
-        return ret.toArray(new String[0]); //ToDO
+        return res;
+    }
+
+    public List<String> getTokens(String text) {
+        List<String> ret = new ArrayList<String>();
+        List<int[]> spots = acAutomation.find(text);
+        spots.add(new int[]{-1, text.length(), text.length()});
+
+        for (int si = 0, segL = 0; si < spots.size(); ++si) {
+            int segR = spots.get(si)[1];
+            if (segL >= segR) continue;
+
+            for (WordWithDebugInfo seg: extractTextInBrackets(text.substring(segL, segR))) {
+                if (seg.source.equals("BRACKET")) {
+                    ret.add(seg.word);
+                    continue;
+                }
+                char[] arr = seg.word.toCharArray();
+                int N = arr.length;
+                double[] dp = new double[N + 1];
+                dp[N] = 0.0;
+                int[] nxt = new int[N + 1];
+                for (int i = N - 1; i >= 0; --i) nxt[i] = i + 1;
+                for (int i = N - 1; i >= 0; --i) {
+                    dp[i] = dict.getMinLogFreq() * 2 + dp[i + 1];
+                    //dp[i] = Double.NEGATIVE_INFINITY; todo no sense
+                    for (int j = i + 1; j <= N; ++j) {
+                        int index = dict.contains(arr, i, j);
+                        if (index == -1) continue;
+                        double tmp = dict.getLogFreq(index) + dp[j];
+                        if (tmp > dp[i]) {
+                            nxt[i] = j;
+                            dp[i] = tmp;
+                        }
+                    }
+                }
+                for (int i = 0; i < N; ) {
+                    if (nxt[i] == i + 1) {
+                        int j = i;
+                        for (; j < N && nxt[j] == j + 1; ++j) ;
+                        for (int l = i, r = i; l < j; ) {
+                            while (r < j && !isASCII(arr[r])) ++r;
+                            if (l < r) ret.addAll(hmm.getTokens(arr, l, r));
+                            l = r;
+                            while (r < j && isASCII(arr[r])) ++r;
+                            if (l < r && l < j) ret.add(new String(arr, l, r - l));
+                            l = r;
+                        }
+                        i = j;
+                        continue;
+                    }
+                    ret.add(new String(arr, i, nxt[i] - i));
+                    i = nxt[i];
+                }
+            }
+            if (spots.get(si)[0] == -1) continue;
+            ret.add(ps.get(spots.get(si)[0]));
+            segL = spots.get(si)[2] + 1;
+        }
+        return ret;
     }
 
     public static class WordWithDebugInfo {
@@ -113,50 +179,67 @@ public class MyTokenizer implements ITokenizer {
         }
     }
 
-    public WordWithDebugInfo[] getTokensWithDebugInfo(String text) {
-        List<WordWithDebugInfo> ret = new ArrayList<WordWithDebugInfo>();
-        char[] arr = text.toCharArray();
-        int N = arr.length;
+    public List<WordWithDebugInfo> getTokensWithDebugInfo(String text) {
 
-        Double[] dp = new Double[N + 1];
-        dp[N] = 0.0;
-        int[] nxt = new int[N + 1];
-        for (int i = N - 1; i >= 0; --i) nxt[i] = i + 1;
-        for (int i = N - 1; i >= 0; --i) {
-            dp[i] = dict.getMinLogFreq() * 2 + dp[i + 1];
-            //dp[i] = Double.NEGATIVE_INFINITY; todo no sense
-            for (int j = i + 1; j <= N; ++j) {
-                int index = dict.contains(arr, i, j);
-                if (index == -1) continue;
-                Double tmp = dict.getLogFreq(index) + dp[j];
-                if (tmp > dp[i]) {
-                    nxt[i] = j;
-                    dp[i] = tmp;
+        List<WordWithDebugInfo> ret = new ArrayList<WordWithDebugInfo>();
+        List<int[]> spots = acAutomation.find(text);
+        spots.add(new int[]{-1, text.length(), text.length()});
+        for (int si = 0, segL = 0; si < spots.size(); ++si) {
+            int segR = spots.get(si)[1];
+            if (segL >= segR) continue;
+
+            for (WordWithDebugInfo seg: extractTextInBrackets(text.substring(segL, segR))) {
+                if (seg.source.equals("BRACKET")) {
+                    ret.add(seg);
+                    continue;
                 }
-            }
-        }
-        for (int i = 0; i < N;) {
-            if (nxt[i] == i + 1) {
-                int j = i;
-                for (; j < N && nxt[j] == j + 1; ++j);
-                for (int l = i, r = i; l < j;) {
-                    while (r < j && !isASCII(arr[r])) ++r;
-                    if (l < r) {
-                        for (String w: hmm.getTokens(arr, l, r))
-                        ret.add(new WordWithDebugInfo(w, "HMM"));
+                char[] arr = seg.word.toCharArray();
+                int N = arr.length;
+                double[] dp = new double[N + 1];
+                dp[N] = 0.0;
+                int[] nxt = new int[N + 1];
+                for (int i = N - 1; i >= 0; --i) nxt[i] = i + 1;
+                for (int i = N - 1; i >= 0; --i) {
+                    dp[i] = dict.getMinLogFreq() * 2 + dp[i + 1];
+                    //dp[i] = Double.NEGATIVE_INFINITY; todo no sense
+                    for (int j = i + 1; j <= N; ++j) {
+                        int index = dict.contains(arr, i, j);
+                        if (index == -1) continue;
+                        double tmp = dict.getLogFreq(index) + dp[j];
+                        if (tmp > dp[i]) {
+                            nxt[i] = j;
+                            dp[i] = tmp;
+                        }
                     }
-                    l = r;
-                    while (r < j && isASCII(arr[r])) ++r;
-                    if (l < r && l < j) ret.add(new WordWithDebugInfo(new String(arr, l, r - l), "ASCII"));
-                    l = r;
                 }
-                i = j;
-                continue;
+                for (int i = 0; i < N; ) {
+                    if (nxt[i] == i + 1) {
+                        int j = i;
+                        for (; j < N && nxt[j] == j + 1; ++j) ;
+                        for (int l = i, r = i; l < j; ) {
+                            while (r < j && !isASCII(arr[r])) ++r;
+                            if (l < r) {
+                                for (String w : hmm.getTokens(arr, l, r))
+                                    ret.add(new WordWithDebugInfo(w, "HMM"));
+                            }
+                            l = r;
+                            while (r < j && isASCII(arr[r])) ++r;
+                            if (l < r && l < j) ret.add(new WordWithDebugInfo(new String(arr, l, r - l), "ASCII"));
+                            l = r;
+                        }
+                        i = j;
+                        continue;
+                    }
+                    ret.add(new WordWithDebugInfo(new String(arr, i, nxt[i] - i), "DICT"));
+                    i = nxt[i];
+                }
             }
-            ret.add(new WordWithDebugInfo(new String(arr, i, nxt[i] - i), "DICT"));
-            i = nxt[i];
+            if (spots.get(si)[0] == -1) continue;
+            ret.add(new WordWithDebugInfo(ps.get(spots.get(si)[0]), "STRONG_DICT"));
+            segL = spots.get(si)[2] + 1;
         }
-        return ret.toArray(new WordWithDebugInfo[0]);
+
+        return ret;
     }
 
     private boolean isASCII(char c) {
