@@ -3,8 +3,7 @@ package com.xiaomi.nlp.pattern;
 import com.xiaomi.nlp.util.ACAutomation;
 import com.xiaomi.nlp.util.LazyList;
 
-import java.io.BufferedReader
-        ;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
@@ -21,6 +20,13 @@ public class SmsPatterns {
     private static String INVALIDWILDCARDDICTPATH = "com/xiaomi/nlp/pattern/invalidWildcardDict.txt"; //todo token those cannot be generalized
     private static ACAutomation InvalidBoundWildcardDict = null;
     private static ACAutomation InvalidWildcardDict = null;
+    private static String TOKEN_WEIGHTS_DICT_PATH = "com/xiaomi/nlp/pattern/token-weights-dict.txt"; //todo token those cannot be generalized
+    private static HashMap<Token, Float> weights;
+    static float getOrElse(HashMap<Token, Float> weights, Token key) {
+        if (!weights.containsKey(key)) return 0.4f;
+        return weights.get(key);
+    }
+
     static {
 
         BufferedReader in = new BufferedReader(new InputStreamReader(MiningPatterns.class.getClassLoader().getResourceAsStream(INVALIDWILDCARDDICTPATH)));
@@ -40,7 +46,56 @@ public class SmsPatterns {
         }
         InvalidWildcardDict = new ACAutomation(list1);
         InvalidBoundWildcardDict = new ACAutomation(list2);
+
+        in = new BufferedReader(new InputStreamReader(MiningPatterns.class.getClassLoader().getResourceAsStream(TOKEN_WEIGHTS_DICT_PATH)));
+        weights = new HashMap<Token, Float>();
+        while (true) {
+            String line = null;
+            try {
+                line = in.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (line == null) break;
+            String[] tokens = line.split("\\t");
+            weights.put(new Token(tokens[0]), Float.valueOf(tokens[1]));
+        }
     }
+
+    public static SmsPattern getLcpWithWeights(OrdSent A, OrdSent B) {
+        int N = A.size(), M = B.size();
+        char[][] preAction = new char[N][M];
+        float[][] totWeights = new float[N][M];
+        for (int i = 0; i < N; ++i)
+            for (int j = 0; j < M; ++j) {
+                float res = 0;
+                if (A.get(i).equals(B.get(j))) {
+                    res = getOrElse(weights, (Token) A.get(i));
+                    if (i > 0 && j > 0) res += totWeights[i - 1][j - 1];
+                    preAction[i][j] = 1;
+                }
+                if (i > 0 && totWeights[i - 1][j] > res) {
+                    preAction[i][j] = 2;
+                    res = totWeights[i - 1][j];
+                }
+                if (j > 0 && totWeights[i][j - 1] > res) {
+                    preAction[i][j] = 3;
+                    res = totWeights[i][j - 1];
+                }
+                totWeights[i][j] = res;
+            }
+
+        SmsPattern ret = new OrdSent();
+        for (int i = N - 1, j = M - 1; i >= 0 && j >= 0;) {
+            if (preAction[i][j] == 1) ret.add(A.get(i));
+            else if (preAction[i][j] == 2) --i;
+            else if (preAction[i][j] == 3) --j;
+        }
+        Collections.reverse(ret.chds.innerList);
+        return ret;
+    }
+
+
 
     public static SmsPattern getLcp(SmsPattern A, SmsPattern B) {
         SmsPattern cand = getLcs(A, B);
