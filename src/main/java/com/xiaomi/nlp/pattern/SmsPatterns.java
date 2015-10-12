@@ -96,6 +96,31 @@ public class SmsPatterns {
     }
 
 
+    public static boolean updWildcardsWithWeights(SmsPattern A, SmsPattern B) {
+        if (A == null) return true;
+        if (B == null) return false;
+        int N = A.size(), M = B.size();
+
+        for (int i = 0, j = 0; i <= N; ++i) {
+            StringBuilder sb = new StringBuilder("");
+            for (; j < M && (i == N || !B.get(j).equals(A.get(i))); ++j) sb.append(B.get(j));
+            ++j;
+            if (sb.length() == 0) continue;
+
+            int p = i;
+            String content = sb.toString();
+            int sourceId = B.corpusId;
+            if (A.wildcards == null) A.wildcards = new HashMap<Integer, Map<String, List<Integer>>>();
+            if (!A.wildcards.containsKey(p)) A.wildcards.put(p, new HashMap<String, List<Integer>>());
+            if (!A.wildcards.get(p).containsKey(content)) A.wildcards.get(p).put(content, new ArrayList<Integer>());
+            A.wildcards.get(p).get(content).add(sourceId);
+        }
+
+        if (A.puncWildcards == null) A.puncWildcards = new HashSet<String>();
+        A.puncWildcards.add(B.punc);
+        return true;
+}
+
 
     public static SmsPattern getLcp(SmsPattern A, SmsPattern B) {
         SmsPattern cand = getLcs(A, B);
