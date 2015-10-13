@@ -57,7 +57,7 @@ public class SmsPatterns {
                 e.printStackTrace();
             }
             if (line == null) break;
-            String[] tokens = line.split("\\t");
+            String[] tokens = line.split("[ ]+");
             weights.put(new Token(tokens[0]), Float.valueOf(tokens[1]));
         }
     }
@@ -87,11 +87,16 @@ public class SmsPatterns {
 
         SmsPattern ret = new OrdSent();
         for (int i = N - 1, j = M - 1; i >= 0 && j >= 0;) {
-            if (preAction[i][j] == 1) ret.add(A.get(i));
+            if (preAction[i][j] == 0) break;
+            if (preAction[i][j] == 1) {
+                ret.add(A.get(i));
+                --i;
+                --j;
+            }
             else if (preAction[i][j] == 2) --i;
             else if (preAction[i][j] == 3) --j;
         }
-        Collections.reverse(ret.chds.innerList);
+        if (ret.chds.size() != 0) Collections.reverse(ret.chds.innerList);
         return ret;
     }
 
@@ -249,7 +254,6 @@ public class SmsPatterns {
 
     public static boolean isSubstr(SmsPattern A, SmsPattern B) {
         int N = A.size(), M = B.size();
-        if (N == 0) return true;
         if (N > M) return false;
         for (int i = 0, j = 0; i < N; ) {
             while (j < M && B.get(j).compareTo(A.get(i)) != 0) ++j;
@@ -259,6 +263,7 @@ public class SmsPatterns {
             ++i;
             ++j;
         }
+        A.origin = B;
         return true;
     }
 

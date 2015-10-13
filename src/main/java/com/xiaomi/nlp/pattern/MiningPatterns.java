@@ -349,7 +349,7 @@ public class MiningPatterns {
                 //todo optimize on time complexity, but harmful due to wildcard argumentation
                 //if (maxPattern.sourceIndex.get(i + from)) continue;
                 if (!ENABLE_ARGUMENT_WILDCARD && maxPattern.sourceIndex.get(i)) continue;
-                if (maxPattern.isSubpatOfFacade(Patterns[i])) {//todo array out of bounds
+                if (maxPattern.isSubstrOfFacade(Patterns[i])) {//todo array out of bounds
                     if (ENABLE_ARGUMENT_WILDCARD) maxPattern.updWildcards();
                     //maxPattern.sourceIndex.add(Patterns[i]);
                     maxPattern.addSource(i);
