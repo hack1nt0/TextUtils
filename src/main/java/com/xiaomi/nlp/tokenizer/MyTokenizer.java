@@ -153,8 +153,8 @@ public class MyTokenizer implements ITokenizer {
     }
 
     public static class WordWithDebugInfo {
-        String word;
-        String source = "HMM"; //or "Dict" or "ASCII"
+        public String word;
+        public String source = "HMM"; //or "Dict" or "ASCII"
 
         public WordWithDebugInfo(String word) {
             this.word = word;
