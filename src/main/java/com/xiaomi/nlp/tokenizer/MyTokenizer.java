@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -22,6 +23,8 @@ public class MyTokenizer implements ITokenizer {
     private static ACAutomation acAutomation;
     private static String strongDictPath = "com/xiaomi/nlp/tokenizer/strong-dict.txt";
     private static List<String> ps = new ArrayList<String>();
+    private static HashSet<String> stopwords;
+    private static String stopwordDictPath = "com/xiaomi/nlp/tokenizer/chinese-stopwords.txt";
 
     static {
         try {
@@ -63,6 +66,25 @@ public class MyTokenizer implements ITokenizer {
 
     private static String lBrackets = "【[(<";
     private static String rBrackets = "】])>";
+
+    public List<String> removeStopwords(List<String> raw) {
+        if (stopwords == null) {
+            stopwords = new HashSet<String>();
+            try {
+                BufferedReader in = new BufferedReader(new InputStreamReader(MyTokenizer.class.getClassLoader().getResourceAsStream(stopwordDictPath)));
+                while (true) {
+                    String line = in.readLine();
+                    if (line == null) break;
+                    stopwords.add(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        List<String> res = new ArrayList<String>();
+        for (String word: raw) if (!stopwords.contains(word)) res.add(word);
+        return res;
+    }
 
     private List<WordWithDebugInfo> extractTextInBrackets(String text) {
         List<WordWithDebugInfo> res = new ArrayList<WordWithDebugInfo>();
