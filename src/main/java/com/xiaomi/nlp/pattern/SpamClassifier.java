@@ -1,5 +1,6 @@
-package com.xiaomi.nlp.classification.spamsms;
+package com.xiaomi.nlp.pattern;
 
+import com.xiaomi.nlp.classification.spamsms.*;
 import com.xiaomi.nlp.tokenizer.MyTokenizer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -22,7 +23,6 @@ import scala.Tuple2;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.HashMap;
 
 /**
  * Created by dy on 15-8-13.
@@ -70,34 +70,29 @@ public class SpamClassifier {
         Tokenizer tokenizer = new ChiTokenizer(MyTokenizer.getInstance()).setInputCol("text").setOutputCol("tokens");
         NGram nGramTransformer = new NGram().setN(2).setInputCol(tokenizer.getOutputCol()).setOutputCol("ngram");
 
-        HashingTF hashingTF = new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("tf");
-        IDF idf = new IDF().setInputCol(hashingTF.getOutputCol()).setOutputCol("tf_idf");
-        NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
-                .setInputCols(new String[]{"label", hashingTF.getOutputCol()})
-                .setOutputCol("nb_pred");
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{urlTransformer, ccratio, tokenizer, hashingTF, idf, naiveBayesEstimator});
-        PipelineModel nbModel = pipeline.fit(trainData);
-        //test
-        DataFrame testData = sqlContext.createDataFrame(splits[1], LabeledDocument.class);
+        HashingTF hashingTF1Gram= new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("1-tf");
+        HashingTF hashingTFNGram= new HashingTF().setInputCol(nGramTransformer.getOutputCol()).setOutputCol("n-tf");
 
-        DataFrame predictions0 = nbModel.transform(trainData);
+        VectorAssembler assembler = new VectorAssembler().setInputCols(new String[]{hashingTF1Gram.getOutputCol(), hashingTFNGram.getOutputCol()})
+                .setOutputCol("tf");
+
+        IDF idf = new IDF().setInputCol(assembler.getOutputCol()).setOutputCol("tf_idf");
+        NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
+                .setInputCols(new String[]{"label", hashingTF1Gram.getOutputCol()})
+                .setOutputCol("nb_pred");
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{urlTransformer, ccratio, tokenizer, nGramTransformer, hashingTF1Gram, hashingTFNGram, assembler, idf, naiveBayesEstimator});
+        PipelineModel nbModel = pipeline.fit(trainData);
+        trainData = nbModel.transform(trainData);
+        trainData.show();
+
+        DataFrame testData = sqlContext.createDataFrame(splits[1], LabeledDocument.class);
+        DataFrame predictions0 = nbModel.transform(testData);
         /*
         for (Row r: predictions0.select("id", "text", "label", finalPred).collect()) {
             System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
                     + ", prediction=" + r.get(3));
         }
         */
-
-        double trainPrecision = predictions0.select("nb_pred", "label")
-                .javaRDD()
-                .filter(new Function<Row, Boolean>() {
-                    @Override
-                    public Boolean call(Row row) throws Exception {
-                        return row.get(0).equals(row.get(1));
-                    }
-                })
-                .count() / (double) trainData.count();
-        System.out.println(trainPrecision);
 
         JavaPairRDD<Object, Object> predAndLabel0 = (predictions0
                 .select("nb_pred", "label")
@@ -111,48 +106,42 @@ public class SpamClassifier {
 
         printTabular(new MulticlassMetrics(predAndLabel0.rdd()));
 
-        VectorAssembler gbtFeatAssembler = new VectorAssembler()
-                .setInputCols(new String[]{ccratio.getOutputCol(), naiveBayesEstimator.getOutputCol()})
-                .setOutputCol("gbt_feat");
 
-        GBTEstimator gbtEstimator = new GBTEstimator()
-                .setInputCols(new String[]{"label", gbtFeatAssembler.getOutputCol()})
-                .setOutputCol("gbt_pred")
-                .setNumIterations(5)
-                ;
-        HashMap<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
-        categoricalFeaturesInfo.put(0, 2);
-        gbtEstimator.setCategoricalFeaturesInfo(categoricalFeaturesInfo);
-        pipeline = new Pipeline().setStages(new PipelineStage[]{gbtFeatAssembler, gbtEstimator});
-        PipelineModel gbtModel = pipeline.fit(trainData);
-        trainData = gbtModel.transform(trainData);
-        trainData.show();
-        //trainData.select("text", "tokens").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
-        //trainData.select("id", "label", "comm_char_ratio", "nb_pred").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
-
-        System.out.println(gbtModel.toString());
-
-        String finalPred = gbtEstimator.getOutputCol();
-
-        DataFrame predictions = gbtModel.transform(nbModel.transform(testData));
-        /*
-        for (Row r: predictions.select("id", "text", "label", finalPred).collect()) {
-            System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
-                    + ", prediction=" + r.get(3));
-        }
-        */
-
-        JavaPairRDD<Object, Object> predAndLabel = (predictions
-                .select(finalPred, "label")
-                .javaRDD()
-                .mapToPair(new PairFunction<Row, Object, Object>() {
-                    @Override
-                    public Tuple2<Object, Object> call(Row row) throws Exception {
-                        return new Tuple2<Object, Object>(row.get(0), row.get(1));
-                    }
-                }));
-
-        printTabular(new MulticlassMetrics(predAndLabel.rdd()));
+//        VectorAssembler gbtFeatAssembler = new VectorAssembler()
+//                .setInputCols(new String[]{ccratio.getOutputCol(), naiveBayesEstimator.getOutputCol()})
+//                .setOutputCol("gbt_feat");
+//
+//        GBTEstimator gbtEstimator = new GBTEstimator()
+//                .setInputCols(new String[]{"label", gbtFeatAssembler.getOutputCol()})
+//                .setOutputCol("gbt_pred")
+//                .setNumIterations(5)
+//                ;
+//        HashMap<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
+//        categoricalFeaturesInfo.put(0, 2);
+//        gbtEstimator.setCategoricalFeaturesInfo(categoricalFeaturesInfo);
+//        pipeline = new Pipeline().setStages(new PipelineStage[]{gbtFeatAssembler, gbtEstimator});
+//        PipelineModel gbtModel = pipeline.fit(trainData);
+//        trainData = gbtModel.transform(trainData);
+//        trainData.show();
+//        trainData.select("text", "tokens").repartition(1).write().format("com.databricks.spark.csv").option("header", "true").save("data/ret/gbt-data.csv");
+//
+//        System.out.println(gbtModel.toString());
+//
+//        String finalPred = gbtEstimator.getOutputCol();
+//
+//        DataFrame predictions = gbtModel.transform(nbModel.transform(testData));
+//
+//        JavaPairRDD<Object, Object> predAndLabel = (predictions
+//                .select(finalPred, "label")
+//                .javaRDD()
+//                .mapToPair(new PairFunction<Row, Object, Object>() {
+//                    @Override
+//                    public Tuple2<Object, Object> call(Row row) throws Exception {
+//                        return new Tuple2<Object, Object>(row.get(0), row.get(1));
+//                    }
+//                }));
+//
+//        printTabular(new MulticlassMetrics(predAndLabel.rdd()));
 
     }
 

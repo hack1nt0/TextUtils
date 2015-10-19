@@ -264,6 +264,15 @@ public class MyTokenizer implements ITokenizer {
         return ret;
     }
 
+    public List<String> getTokensNew(String raw) {
+        List<WordWithDebugInfo> tmp = getTokensWithDebugInfo(raw);
+        List<String> res = new ArrayList<String>();
+        for (WordWithDebugInfo wordWithDebugInfo: tmp) {
+            res.add(wordWithDebugInfo.word);
+        }
+        return res;
+    }
+
     private boolean isASCII(char c) {
         return 0 <= c && c < 128;
     }

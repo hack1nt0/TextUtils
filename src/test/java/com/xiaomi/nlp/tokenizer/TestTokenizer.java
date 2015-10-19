@@ -16,7 +16,7 @@ public class TestTokenizer {
         //MyTokenizer tokenizer = new MyTokenizer("com/xiaomi/nlp/tokenizer/jieba.dict.utf8.sorted", "com/xiaomi/nlp/tokenizer/hmm_model.utf8");
         MyTokenizer tokenizer = MyTokenizer.getInstance();
         String testFilePath = "data/test/testTokenizer.txt";
-        String contrastFilePath = "data/ret/tokenizerRet2.txt";
+        String contrastFilePath = "data/ret/tokenizerRet3.txt";
         BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(testFilePath)));
         PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(contrastFilePath)));
         while (true) {
@@ -25,7 +25,7 @@ public class TestTokenizer {
             out.println(line);
             if (line.trim().length() == 0) continue;
             out.print("[");
-            for (String token: tokenizer.getTokens(line)) {
+            for (String token: tokenizer.getTokensNew(line)) {
                 if (token.trim().length() == 0) continue;
                 out.print(token + ", ");
             }
