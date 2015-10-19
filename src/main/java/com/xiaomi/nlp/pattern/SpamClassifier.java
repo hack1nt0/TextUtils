@@ -21,8 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 
 /**
  * Created by dy on 15-8-13.
@@ -60,7 +59,7 @@ public class SpamClassifier {
                         return res;
                     }
                 })
-                .randomSplit(new double[]{0.8, 0.2});
+                .randomSplit(new double[]{0.8, 0.2}, 17);
 
 
         DataFrame trainData = sqlContext.createDataFrame(splits[0], LabeledDocument.class);
@@ -68,25 +67,27 @@ public class SpamClassifier {
         UrlTransformer urlTransformer = new UrlTransformer().setInputCol("text").setOutputCol("text");
         CommonCharacterTransformer ccratio = new CommonCharacterTransformer().setDict().setInputCol("text").setOutputCol("comm_char_ratio");
         Tokenizer tokenizer = new ChiTokenizer(MyTokenizer.getInstance()).setInputCol("text").setOutputCol("tokens");
-        NGram nGramTransformer = new NGram().setN(2).setInputCol(tokenizer.getOutputCol()).setOutputCol("ngram");
+        NGram twoGramTransformer = new NGram().setN(2).setInputCol(tokenizer.getOutputCol()).setOutputCol("2gram");
+        NGram threeGramTransformer = new NGram().setN(3).setInputCol(tokenizer.getOutputCol()).setOutputCol("3gram");
 
         HashingTF hashingTF1Gram= new HashingTF().setInputCol(tokenizer.getOutputCol()).setOutputCol("1-tf");
-        HashingTF hashingTFNGram= new HashingTF().setInputCol(nGramTransformer.getOutputCol()).setOutputCol("n-tf");
+        HashingTF hashingTF2Gram= new HashingTF().setInputCol(twoGramTransformer.getOutputCol()).setOutputCol("2-tf");
+        HashingTF hashingTF3Gram= new HashingTF().setInputCol(threeGramTransformer.getOutputCol()).setOutputCol("3-tf");
 
-        VectorAssembler assembler = new VectorAssembler().setInputCols(new String[]{hashingTF1Gram.getOutputCol(), hashingTFNGram.getOutputCol()})
+        VectorAssembler assembler = new VectorAssembler().setInputCols(new String[]{hashingTF1Gram.getOutputCol(), hashingTF2Gram.getOutputCol(), hashingTF3Gram.getOutputCol()})
                 .setOutputCol("tf");
 
         IDF idf = new IDF().setInputCol(assembler.getOutputCol()).setOutputCol("tf_idf");
         NaiveBayesEstimator naiveBayesEstimator = new NaiveBayesEstimator()
-                .setInputCols(new String[]{"label", hashingTF1Gram.getOutputCol()})
-                .setOutputCol("nb_pred");
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{urlTransformer, ccratio, tokenizer, nGramTransformer, hashingTF1Gram, hashingTFNGram, assembler, idf, naiveBayesEstimator});
+                .setInputCols(new String[]{"label", assembler.getOutputCol()})
+                .setOutputCol("nb-pred");
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{urlTransformer, ccratio, tokenizer, twoGramTransformer, threeGramTransformer, hashingTF1Gram, hashingTF2Gram, hashingTF3Gram, assembler, idf, naiveBayesEstimator});
         PipelineModel nbModel = pipeline.fit(trainData);
         trainData = nbModel.transform(trainData);
         trainData.show();
 
         DataFrame testData = sqlContext.createDataFrame(splits[1], LabeledDocument.class);
-        DataFrame predictions0 = nbModel.transform(testData);
+        DataFrame nbPred = nbModel.transform(testData);
         /*
         for (Row r: predictions0.select("id", "text", "label", finalPred).collect()) {
             System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
@@ -94,8 +95,8 @@ public class SpamClassifier {
         }
         */
 
-        JavaPairRDD<Object, Object> predAndLabel0 = (predictions0
-                .select("nb_pred", "label")
+        JavaPairRDD<Object, Object> predAndLabel0 = (nbPred
+                .select(naiveBayesEstimator.getOutputCol(), "label")
                 .javaRDD()
                 .mapToPair(new PairFunction<Row, Object, Object>() {
                     @Override
@@ -106,6 +107,30 @@ public class SpamClassifier {
 
         printTabular(new MulticlassMetrics(predAndLabel0.rdd()));
 
+        SvmEstimator svmEstimator = new SvmEstimator().setInputCols(new String[]{"label", idf.getOutputCol()})
+                .setOutputCol("svm-pred");
+        pipeline = pipeline.setStages(new PipelineStage[]{svmEstimator});
+        PipelineModel svmModel = pipeline.fit(trainData);
+        DataFrame svmPred = nbModel.transform(testData);
+        /*
+        for (Row r: predictions0.select("id", "text", "label", finalPred).collect()) {
+            System.out.println("(" + r.get(0) + ", " + r.get(1) + ") --> label=" + r.get(2)
+                    + ", prediction=" + r.get(3));
+        }
+        */
+
+
+        printTabular(new MulticlassMetrics(svmPred
+                .select(naiveBayesEstimator.getOutputCol(), "label")
+                .javaRDD()
+                .mapToPair(new PairFunction<Row, Object, Object>() {
+                    @Override
+                    public Tuple2<Object, Object> call(Row row) throws Exception {
+                        return new Tuple2<Object, Object>(row.get(0), row.get(1));
+                    }
+                })
+                .rdd()
+        ));
 
 //        VectorAssembler gbtFeatAssembler = new VectorAssembler()
 //                .setInputCols(new String[]{ccratio.getOutputCol(), naiveBayesEstimator.getOutputCol()})
@@ -164,6 +189,13 @@ public class SpamClassifier {
         }
         out.println("Recall:" + 100.0 * multiclassMetrics.recall() + "%\tPrecision:" + 100.0 * multiclassMetrics.precision() + "%\tfMeasure:" + 100.0 * multiclassMetrics.fMeasure() + "%\tWRecall:" + 100.0 * multiclassMetrics.weightedRecall() + "%\tWPrecision:" + 100.0 * multiclassMetrics.weightedPrecision() + "%\tWFMeasure:" + 100.0 * multiclassMetrics.weightedFMeasure() + "%");
         out.println("===================================");
+        try {
+            PrintWriter res = new PrintWriter(new OutputStreamWriter(new FileOutputStream("data/ret/spam-classifer.txt", true)));
+            res.println(stringWriter.toString());
+            res.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         System.out.println(stringWriter.toString());
     }
 
