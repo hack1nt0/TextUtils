@@ -1,7 +1,6 @@
 package com.xiaomi.nlp.pattern;
 
 import com.xiaomi.nlp.util.LazyList;
-import com.xiaomi.nlp.util.SynonymDict;
 import com.xiaomi.nlp.util.sms.SmsBaseListener;
 import com.xiaomi.nlp.util.sms.SmsLexer;
 import com.xiaomi.nlp.util.sms.SmsParser;
@@ -370,7 +369,6 @@ public abstract class SmsPattern implements Comparable<SmsPattern> {
 class Token extends SmsPattern {
     public String text;
     public final static Token TOKEN_NULL = new Token("");
-    private final static SynonymDict synonymDict = new SynonymDict();
 
     public Token(String text) {
         super();
@@ -380,7 +378,7 @@ class Token extends SmsPattern {
     @Override
     public int compareTo(SmsPattern o) {
         //return text.compareTo(((Token)o).text);
-        if (synonymDict.iSimilar(text, ((Token)o).text)) return 0;
+        if (SynonymDict.iSimilar(text, ((Token)o).text)) return 0;
         return text.compareTo(((Token)o).text);
     }
 

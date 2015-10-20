@@ -18,9 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +29,30 @@ import java.util.Map;
  * Created by dy on 15-8-13.
  */
 public class SynonymDict {
+    static HashMap<Integer, Integer> ps = new HashMap<Integer, Integer>();
+    static HashMap<String, Integer> ids = new HashMap<String, Integer>();
+    static {
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(SynonymDict.class.getClassLoader().getResourceAsStream("com/xiaomi/nlp/pattern/synonym-dict.txt")));
+            while (true) {
+                String line = in.readLine();
+                if (line == null) break;
+                String[] tokens = line.split("[ ]+");
+                for (int i = 0; i < tokens.length; ++i) {
+                    ids.put(tokens[i], ids.size());
+                    ps.put(ids.get(tokens[i]), i == 0 ? ids.get(tokens[i]) : ids.get(tokens[0]));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static boolean iSimilar(String A, String B) {
+        if (!(ids.containsKey(A) && ids.containsKey(B))) return false;
+        return ps.get(ids.get(A)) == ps.get(ids.get(B));
+    }
+
     private static Logger logger = LoggerFactory.getLogger(SynonymDict.class);
     public static void main(String[] args) throws FileNotFoundException {
         final int NUM_THREAD = 4;
