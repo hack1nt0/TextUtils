@@ -2,6 +2,9 @@ package com.xiaomi.nlp;
 
 import java.util.Arrays;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Created by dy on 15-8-20.
  */
@@ -18,6 +21,11 @@ public class Test {
         String str = "【 苏宁 】 苏宁 易购 8 月 18 日起 五天 五夜 店庆 狂";
         String S = "xiaomimiliao";
         System.out.println(rearrange(S));
+
+        Pattern pattern = Pattern.compile("\\-[\\\\]");
+        Matcher matcher = pattern.matcher("-\\");
+        System.out.println(matcher.matches());
+        System.out.println(matcher.group(0));
     }
 
     public static String rearrange(String S) {
