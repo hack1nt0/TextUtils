@@ -1,10 +1,8 @@
-grammar regex;
+grammar Regex;
 
-wildcard : ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '}' | '[' | ']' | ',' | s_tag_name | WILDCARD;
+wildcard : '(' | ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '}' | '[' | ']' | ',' | s_tag_name | WILDCARD;
 
 s : (s_tag | re_choice)+ EOF;
-
-test : 'cat' | 'ca';
 
 s_tag : '(' '?' '<' s_tag_name '>' re_choice ')';
 
@@ -18,8 +16,7 @@ re_seq : re_seq_elem+? ; //'?' is necessary here, otherwise the re_factor may ov
 
 re_factor : re_char | re_class | re_group | wildcard;
 
-
-re_char : re_esc_char | group_ref;
+re_char : re_esc_char | int_seq | group_ref ;
 
 re_class : '[' '^'? (re_class_char'-'re_class_char | re_class_char )+ ']';
 
@@ -43,7 +40,7 @@ re_esc_char : RE_ESC_CHAR;
 RE_ESC_CHAR : ESC ESC | ESC [fnrtBbDdSsWw.] | ESC 'u' (INTEGER|[a-fA-F]) (INTEGER|[a-fA-F]) (INTEGER|[a-fA-F]) (INTEGER|[a-fA-F]) | ESC [\-\[\](){}?+*|.\^$] ;
 
 
-WILDCARD : '(' | .;
+WILDCARD : .;
 //wildcard : ~(ESC | GROUP_REF | RE_ESC_CHAR);
 
 //| GROUP_REF | RE_ESC_CHAR | INTEGER_STR) ;
