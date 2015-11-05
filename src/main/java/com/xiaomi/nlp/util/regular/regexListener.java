@@ -68,6 +68,16 @@ public interface regexListener extends ParseTreeListener {
 	 */
 	void exitRe_choice(regexParser.Re_choiceContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link regexParser#re_seq_elem}.
+	 * @param ctx the parse tree
+	 */
+	void enterRe_seq_elem(regexParser.Re_seq_elemContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link regexParser#re_seq_elem}.
+	 * @param ctx the parse tree
+	 */
+	void exitRe_seq_elem(regexParser.Re_seq_elemContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link regexParser#re_seq}.
 	 * @param ctx the parse tree
 	 */

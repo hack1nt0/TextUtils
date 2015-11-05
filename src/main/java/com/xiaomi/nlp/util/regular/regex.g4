@@ -12,7 +12,9 @@ s_tag_name : 'time0' | 'money0' | 'card0';
 
 re_choice : re_seq ( '|' re_seq )* ;
 
-re_seq : ( re_factor re_quant? )+ ;
+re_seq_elem : re_factor re_quant?;
+
+re_seq : re_seq_elem+? ; //'?' is necessary here, otherwise the re_factor may overwhelm the s_tag
 
 re_factor : re_char | re_class | re_group | wildcard;
 

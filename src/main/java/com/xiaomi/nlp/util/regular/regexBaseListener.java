@@ -88,6 +88,18 @@ public class regexBaseListener implements regexListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterRe_seq_elem(regexParser.Re_seq_elemContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitRe_seq_elem(regexParser.Re_seq_elemContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterRe_seq(regexParser.Re_seqContext ctx) { }
 	/**
 	 * {@inheritDoc}
