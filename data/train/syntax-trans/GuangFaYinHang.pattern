@@ -1,0 +1,11 @@
+<!segPunctuation> ::= null
+<!task> ::= null
+<!币种1> ::= 人民币|RMB|￥
+<!币种2> ::= 元|人民币|RMB
+<!version> ::= 2.1.2
+
+<?KXRZ> ::= 向您<*>的<*>汇款<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:7+8+9	CharLenLess:6:3	CharLenLonger:7+8+9:6	Score:1:1.0
+<?KXRZ> ::= 向您<*>的<*>汇款<*><#m><*><#m><!币种2>	Ext_RuZhangJinE:6+7+8	CharLenLonger:6+7+8:6	Score:1:1.0
+<?KXRZ> ::= 已收到<*>转入<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:5+6+7	CharLenLess:4:3	CharLenLonger:5+6+7:6	Score:1:1.0
+<?KXRZ> ::= 收入<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:3	CharLenLonger:3+4+5:6	Score:1:1.0
+//<?KXRZ> ::= 向您<*>的<*>汇款<*><!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:8+9+10	CharLenLess:7:3	CharLenLonger:8+9+10:6	Score:1:1.0

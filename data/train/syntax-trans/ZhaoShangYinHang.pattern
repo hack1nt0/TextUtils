@@ -1,0 +1,13 @@
+<!segPunctuation> ::= null
+<!task> ::= null
+<!币种1> ::= 人民币|RMB|￥
+<!币种2> ::= 元|人民币|RMB
+<!结束> ::= ，|。|（
+<!version> ::= 2.1.2
+
+<?KXRZ> ::= 银联卡转入已到账，<!币种1><*><#m><*><#m><!币种2|!空><!结束>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:2	CharLenLonger:3+4+5:6	Score:1:1.0
+<?KXRZ> ::= 他行实时转入<!币种1><*><#m><*><#m><!币种2|!空><!结束>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:2	CharLenLonger:3+4+5:6	Score:1:1.0
+<?KXRZ> ::= 收到本行转入<!币种1><*><#m><*><#m><!币种2|!空><!结束>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:2	CharLenLonger:3+4+5:6	Score:1:1.0
+<?KXRZ> ::= 入账工资，<!币种1><*><#m><*><#m><!币种2|!空><!结束>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:2	CharLenLonger:3+4+5:6	Score:1:1.0
+<?KXRZ> ::= 于<*>收到<!币种1><*><#m><*><#m><!币种2|!空><!结束>	Ext_RuZhangJinE:5+6+7	CharLenLess:4:2	CharLenLonger:5+6+7:6	Score:1:1.0
+<?KXRZ> ::= 收到汇款<!币种1><*><#m><*><#m><!币种2|!空><!结束>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:2	CharLenLonger:3+4+5:6	Score:1:1.0

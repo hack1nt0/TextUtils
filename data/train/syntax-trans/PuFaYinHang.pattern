@@ -1,0 +1,8 @@
+<!segPunctuation> ::= null
+<!task> ::= null
+<!币种1> ::= 人民币|RMB|￥
+<!币种2> ::= 元|人民币|RMB
+<!version> ::= 2.1.2
+
+<?KXRZ> ::= 人民币活期<*>存<*><#m><*><#m>[	Ext_RuZhangJinE:4+5+6	CharLenLess:3:2	CharLenLonger:4+5+6:6	Score:1:1.0
+

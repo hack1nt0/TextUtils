@@ -11,7 +11,7 @@ s : (s_tag | re_choice)+ EOF;
 //sentiment tag
 s_tag : '(' '?' '<' s_tag_name '>' re_choice ')';
 
-s_tag_name : 'time0' | 'money0' | 'card0';
+s_tag_name : 'time0' | 'money0' | 'card0' | 'numeric0' ;
 
 //regex
 re_choice : re_seq ( re_or re_seq )* ;

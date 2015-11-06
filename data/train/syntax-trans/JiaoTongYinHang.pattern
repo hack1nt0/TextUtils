@@ -1,0 +1,7 @@
+<!segPunctuation> ::= null
+<!task> ::= null
+<!币种1> ::= 人民币|RMB|￥
+<!币种2> ::= 元|人民币|RMB
+<!version> ::= 2.1.2
+
+<?KXRZ> ::= 于<*>转账收入<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:5+6+7	CharLenLess:4:3	CharLenLonger:5+6+7:6	Score:1:1.0
