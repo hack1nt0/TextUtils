@@ -1,8 +1,7 @@
-// Generated from /home/dy/Desktop/TextUtils/src/main/java/com/xiaomi/nlp/util/regular/Regex.g4 by ANTLR 4.5
+// Generated from /Users/DY/Desktop/TextUtils/src/main/java/com/xiaomi/nlp/util/regular/Regex.g4 by ANTLR 4.5.1
 package com.xiaomi.nlp.util.regular;
 
 import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
@@ -17,312 +16,312 @@ public class RegexBaseListener implements RegexListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterWildcard(@NotNull RegexParser.WildcardContext ctx) { }
+	@Override public void enterWildcard(RegexParser.WildcardContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitWildcard(@NotNull RegexParser.WildcardContext ctx) { }
+	@Override public void exitWildcard(RegexParser.WildcardContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterWildcard_no_lb(@NotNull RegexParser.Wildcard_no_lbContext ctx) { }
+	@Override public void enterWildcard_no_lb(RegexParser.Wildcard_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitWildcard_no_lb(@NotNull RegexParser.Wildcard_no_lbContext ctx) { }
+	@Override public void exitWildcard_no_lb(RegexParser.Wildcard_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterWildcard_no_mb_to(@NotNull RegexParser.Wildcard_no_mb_toContext ctx) { }
+	@Override public void enterWildcard_no_mb_to(RegexParser.Wildcard_no_mb_toContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitWildcard_no_mb_to(@NotNull RegexParser.Wildcard_no_mb_toContext ctx) { }
+	@Override public void exitWildcard_no_mb_to(RegexParser.Wildcard_no_mb_toContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterS(@NotNull RegexParser.SContext ctx) { }
+	@Override public void enterS(RegexParser.SContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitS(@NotNull RegexParser.SContext ctx) { }
+	@Override public void exitS(RegexParser.SContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterS_tag(@NotNull RegexParser.S_tagContext ctx) { }
+	@Override public void enterS_tag(RegexParser.S_tagContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitS_tag(@NotNull RegexParser.S_tagContext ctx) { }
+	@Override public void exitS_tag(RegexParser.S_tagContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterS_tag_name(@NotNull RegexParser.S_tag_nameContext ctx) { }
+	@Override public void enterS_tag_name(RegexParser.S_tag_nameContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitS_tag_name(@NotNull RegexParser.S_tag_nameContext ctx) { }
+	@Override public void exitS_tag_name(RegexParser.S_tag_nameContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_choice(@NotNull RegexParser.Re_choiceContext ctx) { }
+	@Override public void enterRe_choice(RegexParser.Re_choiceContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_choice(@NotNull RegexParser.Re_choiceContext ctx) { }
+	@Override public void exitRe_choice(RegexParser.Re_choiceContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_or(@NotNull RegexParser.Re_orContext ctx) { }
+	@Override public void enterRe_or(RegexParser.Re_orContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_or(@NotNull RegexParser.Re_orContext ctx) { }
+	@Override public void exitRe_or(RegexParser.Re_orContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_seq(@NotNull RegexParser.Re_seqContext ctx) { }
+	@Override public void enterRe_seq(RegexParser.Re_seqContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_seq(@NotNull RegexParser.Re_seqContext ctx) { }
+	@Override public void exitRe_seq(RegexParser.Re_seqContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_seq_elem(@NotNull RegexParser.Re_seq_elemContext ctx) { }
+	@Override public void enterRe_seq_elem(RegexParser.Re_seq_elemContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_seq_elem(@NotNull RegexParser.Re_seq_elemContext ctx) { }
+	@Override public void exitRe_seq_elem(RegexParser.Re_seq_elemContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_factor(@NotNull RegexParser.Re_factorContext ctx) { }
+	@Override public void enterRe_factor(RegexParser.Re_factorContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_factor(@NotNull RegexParser.Re_factorContext ctx) { }
+	@Override public void exitRe_factor(RegexParser.Re_factorContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_char(@NotNull RegexParser.Re_charContext ctx) { }
+	@Override public void enterRe_char(RegexParser.Re_charContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_char(@NotNull RegexParser.Re_charContext ctx) { }
+	@Override public void exitRe_char(RegexParser.Re_charContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_class(@NotNull RegexParser.Re_classContext ctx) { }
+	@Override public void enterRe_class(RegexParser.Re_classContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_class(@NotNull RegexParser.Re_classContext ctx) { }
+	@Override public void exitRe_class(RegexParser.Re_classContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_class_char(@NotNull RegexParser.Re_class_charContext ctx) { }
+	@Override public void enterRe_class_char(RegexParser.Re_class_charContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_class_char(@NotNull RegexParser.Re_class_charContext ctx) { }
+	@Override public void exitRe_class_char(RegexParser.Re_class_charContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_group(@NotNull RegexParser.Re_groupContext ctx) { }
+	@Override public void enterRe_group(RegexParser.Re_groupContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_group(@NotNull RegexParser.Re_groupContext ctx) { }
+	@Override public void exitRe_group(RegexParser.Re_groupContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_choice_no_lb(@NotNull RegexParser.Re_choice_no_lbContext ctx) { }
+	@Override public void enterRe_choice_no_lb(RegexParser.Re_choice_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_choice_no_lb(@NotNull RegexParser.Re_choice_no_lbContext ctx) { }
+	@Override public void exitRe_choice_no_lb(RegexParser.Re_choice_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_seq_no_lb(@NotNull RegexParser.Re_seq_no_lbContext ctx) { }
+	@Override public void enterRe_seq_no_lb(RegexParser.Re_seq_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_seq_no_lb(@NotNull RegexParser.Re_seq_no_lbContext ctx) { }
+	@Override public void exitRe_seq_no_lb(RegexParser.Re_seq_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_seq_elem_no_lb(@NotNull RegexParser.Re_seq_elem_no_lbContext ctx) { }
+	@Override public void enterRe_seq_elem_no_lb(RegexParser.Re_seq_elem_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_seq_elem_no_lb(@NotNull RegexParser.Re_seq_elem_no_lbContext ctx) { }
+	@Override public void exitRe_seq_elem_no_lb(RegexParser.Re_seq_elem_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_factor_no_lb(@NotNull RegexParser.Re_factor_no_lbContext ctx) { }
+	@Override public void enterRe_factor_no_lb(RegexParser.Re_factor_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_factor_no_lb(@NotNull RegexParser.Re_factor_no_lbContext ctx) { }
+	@Override public void exitRe_factor_no_lb(RegexParser.Re_factor_no_lbContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_quant(@NotNull RegexParser.Re_quantContext ctx) { }
+	@Override public void enterRe_quant(RegexParser.Re_quantContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_quant(@NotNull RegexParser.Re_quantContext ctx) { }
+	@Override public void exitRe_quant(RegexParser.Re_quantContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterInt_seq(@NotNull RegexParser.Int_seqContext ctx) { }
+	@Override public void enterInt_seq(RegexParser.Int_seqContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitInt_seq(@NotNull RegexParser.Int_seqContext ctx) { }
+	@Override public void exitInt_seq(RegexParser.Int_seqContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterEsc(@NotNull RegexParser.EscContext ctx) { }
+	@Override public void enterEsc(RegexParser.EscContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitEsc(@NotNull RegexParser.EscContext ctx) { }
+	@Override public void exitEsc(RegexParser.EscContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterGroup_ref(@NotNull RegexParser.Group_refContext ctx) { }
+	@Override public void enterGroup_ref(RegexParser.Group_refContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitGroup_ref(@NotNull RegexParser.Group_refContext ctx) { }
+	@Override public void exitGroup_ref(RegexParser.Group_refContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterRe_esc_char(@NotNull RegexParser.Re_esc_charContext ctx) { }
+	@Override public void enterRe_esc_char(RegexParser.Re_esc_charContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitRe_esc_char(@NotNull RegexParser.Re_esc_charContext ctx) { }
+	@Override public void exitRe_esc_char(RegexParser.Re_esc_charContext ctx) { }
 
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterEveryRule(@NotNull ParserRuleContext ctx) { }
+	@Override public void enterEveryRule(ParserRuleContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitEveryRule(@NotNull ParserRuleContext ctx) { }
+	@Override public void exitEveryRule(ParserRuleContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void visitTerminal(@NotNull TerminalNode node) { }
+	@Override public void visitTerminal(TerminalNode node) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void visitErrorNode(@NotNull ErrorNode node) { }
+	@Override public void visitErrorNode(ErrorNode node) { }
 }

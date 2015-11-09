@@ -6,28 +6,44 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by dy on 15-11-6.
  */
 public class RegexListenerImpl implements RegexListener {
     //<?XX>=..
-    ArrayList<String> res = new ArrayList<String>();
-    //<!XX>=..
-    static HashMap<String, String> headTags = new HashMap<String, String>();
+    ArrayList<RE_SEG> res = new ArrayList<RE_SEG>();
 
+    boolean hasOuterQuant = false;
     boolean getReGroup = false;
+    boolean getReGroupDown = false;
+    boolean getSTag = false;
+    boolean getDotWild = false;
 
+    @Override
+    public String toString() {
+        StringBuffer sb = new StringBuffer();
+        for (RE_SEG re_seg: res) sb.append(re_seg.toString());
+        return sb.toString();
+    }
+
+    boolean isValid() {
+        return !(getReGroup || getReGroupDown || getSTag || getDotWild);
+    }
 
     @Override
     public void enterWildcard(RegexParser.WildcardContext ctx) {
         //due to they are last visited, so add them safely
-        res.add(ctx.getText());
+        if (!isValid()) return;
+        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
+            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(ctx.getText());
+        else res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
     }
+
 
     @Override
     public void exitWildcard(RegexParser.WildcardContext ctx) {
-
     }
 
     @Override
@@ -62,12 +78,13 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterS_tag(RegexParser.S_tagContext ctx) {
-        if (ctx.s_tag_name().getText().equals("money0")) res.add("<#m><*>.<#m>");
+        getSTag = true;
+        res.add(new S_TAG(ctx.s_tag_name().getText()));
     }
 
     @Override
     public void exitS_tag(RegexParser.S_tagContext ctx) {
-
+        getSTag = false;
     }
 
     @Override
@@ -112,24 +129,35 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterRe_seq_elem(RegexParser.Re_seq_elemContext ctx) {
+        if (!isValid()) return;
         String text = ctx.getText();
         //".*" cannot be translate to "<*>" in the context of either re_group or re_class
-        if (text.equals(".*")) res.add("<*>");
-        else if (ctx.re_factor() != null && ctx.re_factor().re_group() != null) {
-            getReGroup = false;
+        if (text.equals(".*")) {
+            getDotWild = true;
+            res.add(new RE_WILD());
+        }
+        else if (ctx.re_factor() != null && ctx.re_factor().re_group() != null && ctx.re_quant() != null) {
+            hasOuterQuant = true;
         }
     }
 
     @Override
     public void exitRe_seq_elem(RegexParser.Re_seq_elemContext ctx) {
-        if (getReGroup && ctx.re_quant() != null) {
-            if (ctx.re_quant().getText().equals("?")) {
-                String upd = res.get(res.size() - 1);
-                upd = upd.substring(0, upd.length() - 1) + "|!空>";
-                res.add(upd);
-            }
+        if (!getReGroup && getReGroupDown && ctx.re_quant() != null) {
+            getReGroupDown = false;
+            getReGroup = false;
+            ((RE_GROUP)res.get(res.size() - 1)).setQuant(ctx.re_quant().getText());
+            return;
         }
-        getReGroup = false;
+        if (getDotWild) {
+            getDotWild = false;
+            return;
+        }
+        //normal re_group or re_class
+        if (ctx.re_quant() != null) {
+            if (!(res.get(res.size() - 1) instanceof RE_WILD)) res.add(new RE_WILD());
+            return;
+        }
     }
 
     @Override
@@ -172,38 +200,55 @@ public class RegexListenerImpl implements RegexListener {
 
     }
 
+    RegexParser.Re_groupContext re_group_extr = null;
     @Override
     public void enterRe_group(RegexParser.Re_groupContext ctx) {
         //identify the "((xx)|(zz)|..(yy))"
-        if (ctx.re_choice_no_lb() == null || ctx.re_choice_no_lb().re_or() == null
-                || ctx.re_choice_no_lb().re_seq_no_lb() == null
-                || ctx.re_choice_no_lb().re_seq_no_lb().size() <= 1
-                || ctx.re_choice_no_lb().re_or().size() + 1 != ctx.re_choice_no_lb().re_seq_no_lb().size()
-                ) {
-            res.add(ctx.getText());
-            return;
+        if (!isValid()) return;
+        if (ctx.re_choice_no_lb() != null && ctx.re_choice_no_lb().re_or() != null
+                && ctx.re_choice_no_lb().re_seq_no_lb() != null
+                && (hasOuterQuant ||
+                    ctx.re_choice_no_lb().re_or().size() >= 1
+                    && ctx.re_choice_no_lb().re_or().size() + 1 == ctx.re_choice_no_lb().re_seq_no_lb().size()
+                )) {
+            getReGroup = true;
+            re_group_extr = ctx;
+            StringBuffer sb = new StringBuffer();
+            for (RegexParser.Re_seq_no_lbContext e : ctx.re_choice_no_lb().re_seq_no_lb()) {
+                if (sb.length() != 0) sb.append("|");
+                sb.append(e.getText().substring(1, e.getText().length() - 1));
+            }
+            RE_GROUP re_group = new RE_GROUP();
+            re_group.setChoice(sb.toString());
+            res.add(re_group);
         }
-        getReGroup = true;
-        StringBuffer sb = new StringBuffer();
-        for (RegexParser.Re_seq_no_lbContext e: ctx.re_choice_no_lb().re_seq_no_lb()) {
-            if (sb.length() != 0) sb.append("|");
-            sb.append(e.getText().substring(1, e.getText().length() - 1));
-        }
-        String key = sb.toString();
-        String value = "";
-        try {
-            value = ctx.re_choice_no_lb().re_seq_no_lb(0).re_seq_elem_no_lb(0).re_factor_no_lb().re_group().re_choice_no_lb().getText();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println(ctx.getText());
-        }
-        if (!headTags.containsKey(key)) headTags.put(key, "<!" + value + ">");
-        res.add(headTags.get(key));
     }
 
     @Override
     public void exitRe_group(RegexParser.Re_groupContext ctx) {
+        if (re_group_extr == ctx) {
+            re_group_extr = null;
+            getReGroupDown = true;
+            getReGroup = false;
+            return;
+        }
+        if (getReGroupDown && ctx.re_choice_no_lb() != null && ctx.re_choice_no_lb().re_seq_no_lb() != null
+                && ctx.re_choice_no_lb().re_seq_no_lb().size() == 1
+                && ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().size() >= 2
+                ) {
+            int cnt = ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().size();
+            if (cnt >= 3) ((RE_GROUP)res.get(res.size() - 1)).setLeft_margin(ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().get(0).getText());
+            if (cnt >= 2) ((RE_GROUP)res.get(res.size() - 1)).setRight_margin(ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().get(cnt - 1).getText());
+            return;
+        }
 
+        if (!isValid()) return;
+
+        //normal re_group
+        if (!getReGroup) {
+            res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
+            return;
+        }
     }
 
     @Override
