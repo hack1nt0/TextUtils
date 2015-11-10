@@ -6,7 +6,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import javax.print.attribute.standard.PrinterLocation;
 import java.io.*;
 import java.util.*;
 
@@ -95,6 +94,8 @@ public class RegexToSms {
     static ArrayList<Knowledge> knowledges = new ArrayList<Knowledge>();
     static {
         knowledges.add(new Knowledge("Ext_RuZhangJinE", "money0", "收入|入账", "", 6, -1, -1, 3));
+        knowledges.add(new Knowledge("Ext_RuZhangJinE", "money1", "收入|入账", "", 6, -1, -1, 3));
+
     }
 
     static HashMap<Integer[], String> ident2KL = new HashMap<Integer[], String>();
@@ -141,8 +142,8 @@ public class RegexToSms {
         }
 
         int idx = 2;
-        for (String group_tag : RE_GROUP.group_tags.keySet())
-            res.add(idx++, RE_GROUP.group_tags.get(group_tag) + " ::= " + group_tag);
+        for (String group_tag : S_GROUP.group_tags.keySet())
+            res.add(idx++, S_GROUP.group_tags.get(group_tag) + " ::= " + group_tag);
 
         for (int i = 0; i < res.size(); ++i) out.println(res.get(i));
     }
@@ -196,34 +197,42 @@ class S_TAG extends RE_SEG {
     }
 }
 
-class RE_GROUP extends RE_SEG {
+class S_CLASS extends RE_SEG {
+
+}
+
+class S_GROUP extends RE_SEG {
     String choice;
     String left_margin;
     String right_margin;
     String quant;
     static HashMap<String, String> group_tags = new HashMap<String, String>();
 
-    public void setChoice(String choice) {
-        this.choice = choice;
-        if (!group_tags.containsKey(choice)) {
-            String tag = choice.split("\\|")[0];
-            group_tags.put(choice, "<!" + tag + ">");
+    public S_GROUP(String choice, String left_margin, String right_margin, String quant) {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < choice.length(); ++i) {
+            char c = choice.charAt(i);
+            if (c == '(' || c == ')') continue;
+            sb.append(c);
         }
-    }
-
-    public void setLeft_margin(String left_margin) {
+        this.choice = sb.toString();
         this.left_margin = left_margin;
-        offset++;
-        ++span;
-    }
-
-    public void setRight_margin(String right_margin) {
         this.right_margin = right_margin;
-        ++span;
-    }
-
-    public void setQuant(String quant) {
         this.quant = quant;
+
+        if (!group_tags.containsKey(this.choice)) {
+            String tag = this.choice.split("\\|")[0];
+            group_tags.put(this.choice, "<!" + tag + ">");
+        }
+
+        if (this.left_margin != null) {
+            offset++;
+            ++span;
+        }
+
+        if (this.right_margin != null) {
+            ++span;
+        }
     }
 
     @Override
@@ -242,7 +251,7 @@ class RE_GROUP extends RE_SEG {
     }
 }
 
-class RE_WILD extends RE_SEG {
+class S_WILD extends RE_SEG {
 
     @Override
     public String toString() {

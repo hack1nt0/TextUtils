@@ -1,12 +1,11 @@
 package com.xiaomi.nlp.util.regular;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 /**
  * Created by dy on 15-11-6.
@@ -15,11 +14,9 @@ public class RegexListenerImpl implements RegexListener {
     //<?XX>=..
     ArrayList<RE_SEG> res = new ArrayList<RE_SEG>();
 
-    boolean hasOuterQuant = false;
-    boolean getReGroup = false;
-    boolean getReGroupDown = false;
+    boolean getSGroup = false;
+    boolean getSClass= false;
     boolean getSTag = false;
-    boolean getDotWild = false;
 
     @Override
     public String toString() {
@@ -29,18 +26,12 @@ public class RegexListenerImpl implements RegexListener {
     }
 
     boolean isValid() {
-        return !(getReGroup || getReGroupDown || getSTag || getDotWild);
+        return !(getSGroup || getSClass || getSTag);
     }
 
     @Override
     public void enterWildcard(RegexParser.WildcardContext ctx) {
-        //due to they are last visited, so add them safely
-        if (!isValid()) return;
-        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
-            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(ctx.getText());
-        else res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
     }
-
 
     @Override
     public void exitWildcard(RegexParser.WildcardContext ctx) {
@@ -98,6 +89,64 @@ public class RegexListenerImpl implements RegexListener {
     }
 
     @Override
+    public void enterS_group(@NotNull RegexParser.S_groupContext ctx) {
+        if (!isValid()) return;
+        getSGroup = true;
+        String group_text = ctx.re_group() == null ? ctx.getText() : ctx.re_group().getText();
+        String l_margin_text = ctx.s_group_l_margin() == null ? null : ctx.s_group_l_margin().getText();
+        String r_margin_text = ctx.s_group_r_margin() == null ? null : ctx.s_group_r_margin().getText();
+        String quant_text = ctx.re_quant() == null ? null : ctx.re_quant().getText();
+        res.add(new S_GROUP(group_text, l_margin_text, r_margin_text, quant_text));
+    }
+
+    @Override
+    public void exitS_group(@NotNull RegexParser.S_groupContext ctx) {
+        getSGroup = false;
+    }
+
+    @Override
+    public void enterS_group_l_margin(@NotNull RegexParser.S_group_l_marginContext ctx) {
+
+    }
+
+    @Override
+    public void exitS_group_l_margin(@NotNull RegexParser.S_group_l_marginContext ctx) {
+
+    }
+
+    @Override
+    public void enterS_group_r_margin(@NotNull RegexParser.S_group_r_marginContext ctx) {
+
+    }
+
+    @Override
+    public void exitS_group_r_margin(@NotNull RegexParser.S_group_r_marginContext ctx) {
+
+    }
+
+    @Override
+    public void enterS_group_margin(RegexParser.S_group_marginContext ctx) {
+
+    }
+
+    @Override
+    public void exitS_group_margin(RegexParser.S_group_marginContext ctx) {
+
+    }
+
+    @Override
+    public void enterS_class(RegexParser.S_classContext ctx) {
+        if (!isValid()) return;
+        getSClass = true;
+        if (res.size() > 0 && !(res.get(res.size() - 1) instanceof S_WILD)) res.add(new S_WILD());
+    }
+
+    @Override
+    public void exitS_class(RegexParser.S_classContext ctx) {
+        getSClass = false;
+    }
+
+    @Override
     public void enterRe_choice(RegexParser.Re_choiceContext ctx) {
 
     }
@@ -133,31 +182,16 @@ public class RegexListenerImpl implements RegexListener {
         String text = ctx.getText();
         //".*" cannot be translate to "<*>" in the context of either re_group or re_class
         if (text.equals(".*")) {
-            getDotWild = true;
-            res.add(new RE_WILD());
+            res.add(new S_WILD());
+            return;
         }
-        else if (ctx.re_factor() != null && ctx.re_factor().re_group() != null && ctx.re_quant() != null) {
-            hasOuterQuant = true;
-        }
+        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
+            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(ctx.getText());
+        else res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
     }
 
     @Override
     public void exitRe_seq_elem(RegexParser.Re_seq_elemContext ctx) {
-        if (!getReGroup && getReGroupDown && ctx.re_quant() != null) {
-            getReGroupDown = false;
-            getReGroup = false;
-            ((RE_GROUP)res.get(res.size() - 1)).setQuant(ctx.re_quant().getText());
-            return;
-        }
-        if (getDotWild) {
-            getDotWild = false;
-            return;
-        }
-        //normal re_group or re_class
-        if (ctx.re_quant() != null) {
-            if (!(res.get(res.size() - 1) instanceof RE_WILD)) res.add(new RE_WILD());
-            return;
-        }
     }
 
     @Override
@@ -200,55 +234,12 @@ public class RegexListenerImpl implements RegexListener {
 
     }
 
-    RegexParser.Re_groupContext re_group_extr = null;
     @Override
     public void enterRe_group(RegexParser.Re_groupContext ctx) {
-        //identify the "((xx)|(zz)|..(yy))"
-        if (!isValid()) return;
-        if (ctx.re_choice_no_lb() != null && ctx.re_choice_no_lb().re_or() != null
-                && ctx.re_choice_no_lb().re_seq_no_lb() != null
-                && (hasOuterQuant ||
-                    ctx.re_choice_no_lb().re_or().size() >= 1
-                    && ctx.re_choice_no_lb().re_or().size() + 1 == ctx.re_choice_no_lb().re_seq_no_lb().size()
-                )) {
-            getReGroup = true;
-            re_group_extr = ctx;
-            StringBuffer sb = new StringBuffer();
-            for (RegexParser.Re_seq_no_lbContext e : ctx.re_choice_no_lb().re_seq_no_lb()) {
-                if (sb.length() != 0) sb.append("|");
-                sb.append(e.getText().substring(1, e.getText().length() - 1));
-            }
-            RE_GROUP re_group = new RE_GROUP();
-            re_group.setChoice(sb.toString());
-            res.add(re_group);
-        }
     }
 
     @Override
     public void exitRe_group(RegexParser.Re_groupContext ctx) {
-        if (re_group_extr == ctx) {
-            re_group_extr = null;
-            getReGroupDown = true;
-            getReGroup = false;
-            return;
-        }
-        if (getReGroupDown && ctx.re_choice_no_lb() != null && ctx.re_choice_no_lb().re_seq_no_lb() != null
-                && ctx.re_choice_no_lb().re_seq_no_lb().size() == 1
-                && ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().size() >= 2
-                ) {
-            int cnt = ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().size();
-            if (cnt >= 3) ((RE_GROUP)res.get(res.size() - 1)).setLeft_margin(ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().get(0).getText());
-            if (cnt >= 2) ((RE_GROUP)res.get(res.size() - 1)).setRight_margin(ctx.re_choice_no_lb().re_seq_no_lb().get(0).re_seq_elem_no_lb().get(cnt - 1).getText());
-            return;
-        }
-
-        if (!isValid()) return;
-
-        //normal re_group
-        if (!getReGroup) {
-            res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
-            return;
-        }
     }
 
     @Override

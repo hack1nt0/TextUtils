@@ -13,7 +13,11 @@ s_tag : '(' '?' '<' s_tag_name '>' re_choice ')';
 
 s_tag_name : 'time0' | 'money0' | 'money1' | 'card0' | 'numeric0' ;
 
-s_group : '(' s_group_margin? re_group s_group_margin? ')' '?' | '(' re_seq_no_lb re_or re_seq_no_lb (re_or re_seq_no_lb)* ')' ;
+s_group : '(' s_group_l_margin? re_group s_group_r_margin? ')' re_quant | '(' re_seq_no_lb re_or re_seq_no_lb (re_or re_seq_no_lb)* ')' ;
+
+s_group_l_margin : s_group_margin;
+
+s_group_r_margin : s_group_margin;
 
 s_group_margin : ((re_class | re_char | wildcard_no_lb) re_quant?)+;
 
