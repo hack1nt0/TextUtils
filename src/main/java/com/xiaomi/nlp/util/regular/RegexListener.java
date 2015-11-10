@@ -68,6 +68,36 @@ public interface RegexListener extends ParseTreeListener {
 	 */
 	void exitS_tag_name(RegexParser.S_tag_nameContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link RegexParser#s_group}.
+	 * @param ctx the parse tree
+	 */
+	void enterS_group(RegexParser.S_groupContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link RegexParser#s_group}.
+	 * @param ctx the parse tree
+	 */
+	void exitS_group(RegexParser.S_groupContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link RegexParser#s_group_margin}.
+	 * @param ctx the parse tree
+	 */
+	void enterS_group_margin(RegexParser.S_group_marginContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link RegexParser#s_group_margin}.
+	 * @param ctx the parse tree
+	 */
+	void exitS_group_margin(RegexParser.S_group_marginContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link RegexParser#s_class}.
+	 * @param ctx the parse tree
+	 */
+	void enterS_class(RegexParser.S_classContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link RegexParser#s_class}.
+	 * @param ctx the parse tree
+	 */
+	void exitS_class(RegexParser.S_classContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link RegexParser#re_choice}.
 	 * @param ctx the parse tree
 	 */

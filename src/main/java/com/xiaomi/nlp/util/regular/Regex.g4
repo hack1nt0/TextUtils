@@ -6,12 +6,18 @@ wildcard_no_lb : '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | '[' | ']
 
 wildcard_no_mb_to: '(' | ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | ',' | '|' | s_tag_name | WILDCARD;
 
-s : (s_tag | re_choice)+ EOF;
+s : (s_tag | s_group | s_class | re_choice)+ EOF;
 
 //sentiment tag
 s_tag : '(' '?' '<' s_tag_name '>' re_choice ')';
 
 s_tag_name : 'time0' | 'money0' | 'money1' | 'card0' | 'numeric0' ;
+
+s_group : '(' s_group_margin? re_group s_group_margin? ')' '?' | '(' re_seq_no_lb re_or re_seq_no_lb (re_or re_seq_no_lb)* ')' ;
+
+s_group_margin : ((re_class | re_char | wildcard_no_lb) re_quant?)+;
+
+s_class : re_class re_quant? ;
 
 //regex
 re_choice : re_seq ( re_or re_seq )* ;
