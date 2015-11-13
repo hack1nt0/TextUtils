@@ -23,12 +23,15 @@ public class RegexToSms {
         int upper_len;
         int lower_margin;
         int upper_margin;
+        int offset; //offset from head of sms pattern
 
-        public Knowledge(String name, String lower_word_feat, String tag_name, String upper_word_feat, int lower_len, int upper_len, int lower_margin, int upper_margin) {
+        public Knowledge(String name, String tag_name, String lower_word_feat, String upper_word_feat, int lower_len, int upper_len, int lower_margin, int upper_margin) {
             this.name = name;
-            for (String w: lower_word_feat.split("\\|")) this.lower_word_feat.add(w);
+            if (lower_word_feat != null)
+                for (String w: lower_word_feat.split("\\|")) if (w.trim().length() != 0) this.lower_word_feat.add(w);
             this.tag_name = tag_name;
-            for (String w: upper_word_feat.split("\\|")) this.upper_word_feat.add(w);
+            if (upper_word_feat != null)
+                for (String w: upper_word_feat.split("\\|")) if (w.trim().length() != 0) this.upper_word_feat.add(w);
             this.lower_len = lower_len;
             this.upper_len = upper_len;
             this.lower_margin = lower_margin;
@@ -45,14 +48,14 @@ public class RegexToSms {
                 if (!s_tag.tag_name.equals(tag_name)) return false;
                 if (lower_word_feat.size() != 0) {
                     if (re_literals_pre == null) return false;
-                    List<String> re_wild_pre_words = re_literals_pre.words;
+                    List<String> re_wild_pre_words = re_literals_pre.getWords();
                     boolean find = false;
                     for (String w: re_wild_pre_words) if (lower_word_feat.contains(w)) find = true;
                     if (!find) return false;
                 }
                 if (upper_word_feat.size() != 0) {
                     if (re_literals_after == null) return false;
-                    List<String> re_wild_after_words = re_literals_after.words;
+                    List<String> re_wild_after_words = re_literals_after.getWords();
                     boolean find = false;
                     for (String w: re_wild_after_words) if (upper_word_feat.contains(w)) find = true;
                     if (!find) return false;
@@ -78,8 +81,6 @@ public class RegexToSms {
             sb.append("\t");
             if (upper_len != -1) sb.append("CharLenLess:" + span_seq + ":" + upper_len);
             sb.append("\t");
-            if (upper_len != -1) sb.append("CharLenLess:" + span_seq + ":" + upper_len);
-            sb.append("\t");
             if (lower_margin != -1) sb.append("CharLenLonger:" + (start_pos - 1) + ":" + lower_margin);
             sb.append("\t");
             if (upper_margin != -1) sb.append("CharLenLess:" + (start_pos + span) + ":" + upper_margin);
@@ -95,6 +96,9 @@ public class RegexToSms {
     static {
         knowledges.add(new Knowledge("Ext_RuZhangJinE", "money0", "收入|入账", "", 6, -1, -1, 3));
         knowledges.add(new Knowledge("Ext_RuZhangJinE", "money1", "收入|入账", "", 6, -1, -1, 3));
+        //knowledges.add(new Knowledge("Ext_XiaoFeiJinE", "money0", "支出|消费", "", 6, -1, -1, 3));
+        //knowledges.add(new Knowledge("Ext_XiaoFeiJinE", "money1", "支出|消费", "", 6, -1, -1, 3));
+
 
     }
 
@@ -108,16 +112,17 @@ public class RegexToSms {
         String inputFile = "GongShangYinHang";
         BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream("data/train/syntax-trans/" + inputFile)));
         PrintWriter out = new PrintWriter(new FileOutputStream("data/ret/syntax-trans/" + inputFile));
-        LinkedList<String> res = new LinkedList<String>();
+        LinkedList<String> ret = new LinkedList<String>();
 
-        res.add("<!segPunctution> ::= " + segPunc);
-        res.add("<!task> ::= " + task);
-        res.add("<!version> ::= " + version);
+        ret.add("<!segPunctution> ::= " + segPunc);
+        ret.add("<!task> ::= " + task);
+        ret.add("<!version> ::= " + version);
+        ret.add("\n");
 
         while (true) {
             String line = in.readLine();
             if (line == null) break;
-            for (String seg: line.split(segPunc)) {
+            for (String seg: line.split("[" + segPunc + "]")) {
                 ANTLRInputStream input = new ANTLRInputStream(new StringReader(seg));
                 RegexLexer regexLexer = new RegexLexer(input);
                 CommonTokenStream tokens = new CommonTokenStream(regexLexer);
@@ -130,28 +135,50 @@ public class RegexToSms {
                 List<Integer[]> demands = extractKL(regexListener.res);
                 if (demands.size() == 0) continue;
                 String identifier = identify(demands);
-                StringBuffer sb = new StringBuffer();
-                //apd left and right text
-                sb.append(identifier + " ::= " + regexListener + "\t");
-                //apd knowledge
-                for (Integer[] p: demands) sb.append(knowledges.get(p[2]).toString(p[0], p[1]) + "\t");
-                //apd score
-                sb.append("Score:1:1.0");
-                res.add(sb.toString());
+                StringBuffer patternText = new StringBuffer();
+                StringBuffer patternConstrains = new StringBuffer();
+                int p = demands.get(0)[1];
+                int offset = 0;
+                for (int i = 0; i < demands.size(); ++i) {
+                    Integer[] interval = demands.get(i);
+                    p = demands.get(i)[1];
+                    if (p < demands.get(i)[1]) {
+                        patternText.append("<*>");
+                        offset++;
+                    } else if (p > demands.get(i)[1]) {
+                        p = demands.get(i - 1)[2] + 1;
+                    }
+                    patternConstrains.append(knowledges.get(interval[3]).toString(offset + interval[0] - interval[1], -1));
+
+                    while (p <= demands.get(i)[2]) {
+                        patternText.append(regexListener.res.get(p));
+                        offset += regexListener.res.get(p).span;
+                    }
+                }
+                StringBuffer res = new StringBuffer();
+                res.append(identifier + " ::= ");
+                res.append(patternText);
+                res.append("\t");
+                res.append(patternConstrains);
+                res.append("\t");
+                res.append("Score:1:1.0");
+                ret.add(res.toString());
             }
         }
 
         int idx = 2;
         for (String group_tag : S_GROUP.group_tags.keySet())
-            res.add(idx++, S_GROUP.group_tags.get(group_tag) + " ::= " + group_tag);
+            ret.add(idx++, S_GROUP.group_tags.get(group_tag) + " ::= " + group_tag);
 
-        for (int i = 0; i < res.size(); ++i) out.println(res.get(i));
+        for (int i = 0; i < ret.size(); ++i) out.println(ret.get(i));
+        out.close();
     }
 
     private static List<Integer[]> extractKL(ArrayList<RE_SEG> klArr) {
         ArrayList<Integer[]> res = new ArrayList<Integer[]>();
         int start_pos = 0;
         for (int i = 0; i < klArr.size(); ++i) {
+            if (!(klArr.get(i) instanceof S_TAG)) continue;
             for (int j = 0; j < knowledges.size(); ++j) {
                 int k, l;
                 k = l = -1;
@@ -265,7 +292,12 @@ class RE_LITERALS extends RE_SEG {
 
     public RE_LITERALS(StringBuffer literals) {
         this.literals = literals;
+    }
+
+    public List<String> getWords() {
+        if (words != null) return words;
         words = MyTokenizer.getInstance().getTokens(literals.toString());
+        return words;
     }
 
     @Override
