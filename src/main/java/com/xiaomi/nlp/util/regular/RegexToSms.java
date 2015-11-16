@@ -149,20 +149,20 @@ public class RegexToSms {
                     int l_literal_pos = interval[2];
                     int r_literal_pos = interval[3];
 
-                    s_idx = Math.max(s_idx, l_literal_pos);
-                    if (s_idx < l_literal_pos) {
+                    if (0 < s_idx && s_idx < l_literal_pos && !endWith(patternText, "<*>")) {
                         patternText.append(new S_WILD());
                         expand_offset++;
-                        s_idx = l_literal_pos;
                     }
+
+                    s_idx = Math.max(s_idx, l_literal_pos);
 
                     while (s_idx < r_literal_pos) {
                         RE_SEG re_seg = s_arr.get(s_idx);
-                        patternText.append(re_seg);
+                        patternText.append(re_seg.toString(patternText));
                         if (s_idx == s_pos) {
-                            patternConstrains.append(knowledges.get(kl_id).toString(expand_offset + re_seg.offset, re_seg.offset_span));
+                            patternConstrains.append(knowledges.get(kl_id).toString(expand_offset + re_seg.offset(patternText), re_seg.offset_span));
                         }
-                        expand_offset += re_seg.span;
+                        expand_offset += re_seg.span(patternText);
 
                         s_idx++;
                     }
@@ -195,7 +195,6 @@ public class RegexToSms {
             if (!(klArr.get(i) instanceof S_TAG)) continue;
             for (int j = 0; j < knowledges.size(); ++j) {
                 int k, l;
-                k = l = -1;
                 for (k = i - 1; k >= 0; --k) if (klArr.get(k) instanceof RE_LITERALS) break;
                 for (l = i + 1; l < klArr.size(); ++l) if (klArr.get(l) instanceof RE_LITERALS) break;
                 if (!knowledges.get(j).match(klArr, k, i, l)) continue;
@@ -211,12 +210,30 @@ public class RegexToSms {
         return default_ident;
     }
 
+    public static boolean endWith(StringBuffer pre, String tail) {
+        for (int i = 0; i < tail.length(); ++i) {
+            if (pre.length() - 1 - i < 0 || pre.charAt(pre.length() - 1 - i) != tail.charAt(tail.length() - 1 - i)) return false;
+        }
+        return true;
+    }
 }
 
 class RE_SEG {
     int span = 1;
     int offset = 0;
     int offset_span = 1;
+
+    public int span(StringBuffer pre) {
+        return span;
+    }
+
+    public int offset(StringBuffer pre) {
+        return offset;
+    }
+
+    public String toString(StringBuffer pre) {
+        return this.toString();
+    }
 
     public boolean match(String featWord) {
         return true;
@@ -285,9 +302,41 @@ class S_GROUP extends RE_SEG {
     }
 
     @Override
+    public int span(StringBuffer pre) {
+        return left_margin != null && RegexToSms.endWith(pre, "<*>") ? span - 1 : span;
+    }
+
+    @Override
+    public int offset(StringBuffer pre) {
+        return left_margin != null && RegexToSms.endWith(pre, "<*>") ? offset - 1 : offset;
+    }
+
+    @Override
     public boolean match(String featWord) {
         for (String word: choices) if (word.equals(featWord)) return true;
         return false;
+    }
+
+    @Override
+    public String toString(StringBuffer pre) {
+        //side effect, don't call it unless necessary. todo
+        if (!group_tags.containsKey(this.choice)) {
+            String tag = this.choices[0];
+            if (this.choices.length > 1) tag = "<!" + tag + ">";
+            group_tags.put(this.choice, tag);
+        }
+
+        StringBuffer sb = new StringBuffer();
+        if (left_margin != null && RegexToSms.endWith(pre, "<*>")) {
+            sb.append("<*>");
+        }
+        String tag = group_tags.get(choice);
+        if (quant != null && quant.equals("?")) tag = tag.substring(0, tag.length() - 1) + "|!空>";
+        sb.append(tag);
+        if (right_margin != null) {
+            sb.append("<*>");
+        }
+        return sb.toString();
     }
 
     @Override
