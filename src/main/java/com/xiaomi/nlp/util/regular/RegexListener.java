@@ -249,6 +249,16 @@ public interface RegexListener extends ParseTreeListener {
 	 */
 	void exitRe_factor_no_lb(@NotNull RegexParser.Re_factor_no_lbContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link RegexParser#s_wild}.
+	 * @param ctx the parse tree
+	 */
+	void enterS_wild(@NotNull RegexParser.S_wildContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link RegexParser#s_wild}.
+	 * @param ctx the parse tree
+	 */
+	void exitS_wild(@NotNull RegexParser.S_wildContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link RegexParser#re_quant}.
 	 * @param ctx the parse tree
 	 */

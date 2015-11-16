@@ -1,12 +1,12 @@
 grammar Regex;
 
-wildcard : '(' | ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | '[' | ']' | ',' | '|' | '-' | s_tag_name | WILDCARD;
+wildcard : '(' | ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | '[' | ']' | ',' | '|' | '-' | '.' | s_tag_name | WILDCARD;
 
-wildcard_no_lb : '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | '[' | ']' | ',' | '|' | '-' | s_tag_name | WILDCARD;
+wildcard_no_lb : '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | '[' | ']' | ',' | '|' | '-' | '.' | s_tag_name | WILDCARD;
 
-wildcard_no_mb_to: '(' | ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | ',' | '|' | s_tag_name | WILDCARD;
+wildcard_no_mb_to: '(' | ')' | '^' | '?' | '<' | '>' | '?' | '*' | '+'  | '{' | '}' | ',' | '|' | '.' | s_tag_name | WILDCARD;
 
-s : (s_tag | s_group | s_class | re_choice)+ EOF;
+s : (s_tag | s_group | s_class | s_wild | re_choice)+ EOF;
 
 //sentiment tag
 s_tag : '(' '?' '<' s_tag_name '>' re_choice ')';
@@ -34,7 +34,7 @@ re_seq_elem : re_factor re_quant?;
 
 re_factor : re_class | re_group | re_char | wildcard;
 
-re_char : re_esc_char | int_seq | group_ref ;
+re_char : re_esc_char | int_seq | group_ref | '.' ;
 
 //class
 re_class : '[' '^'? (re_class_char'-'re_class_char | re_class_char )+ ']';
@@ -51,6 +51,9 @@ re_seq_no_lb : re_seq_elem_no_lb+? ; //'?' is necessary here, otherwise the re_f
 re_seq_elem_no_lb : re_factor_no_lb re_quant?;
 
 re_factor_no_lb : re_class | re_group | re_char | wildcard_no_lb;
+
+//s_wild : . quant?
+s_wild : '.' re_quant? ;
 
 //quantifier
 re_quant : ( '?' | '*' | '+' | '{' INTEGER_STR* (',' (INTEGER_STR*)?)? '}' ) '?'? ; //why not INTEGER?

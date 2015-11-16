@@ -17,6 +17,8 @@ public class RegexListenerImpl implements RegexListener {
     boolean getSGroup = false;
     boolean getSClass= false;
     boolean getSTag = false;
+    boolean getSWild = false;
+
 
     @Override
     public String toString() {
@@ -26,7 +28,7 @@ public class RegexListenerImpl implements RegexListener {
     }
 
     boolean isValid() {
-        return !(getSGroup || getSClass || getSTag);
+        return !(getSGroup || getSClass || getSTag || getSWild);
     }
 
     @Override
@@ -178,16 +180,6 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterRe_seq_elem(RegexParser.Re_seq_elemContext ctx) {
-        if (!isValid()) return;
-        String text = ctx.getText();
-        //".*" cannot be translate to "<*>" in the context of either re_group or re_class
-        if (text.equals(".*")) {
-            res.add(new S_WILD());
-            return;
-        }
-        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
-            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(ctx.getText());
-        else res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
     }
 
     @Override
@@ -196,6 +188,15 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterRe_factor(RegexParser.Re_factorContext ctx) {
+        if (!isValid()) return;
+        String text = ctx.getText();
+        if (ctx.re_char() != null && ctx.re_char().re_esc_char() != null) {
+            if (text.equals("\\(") || text.equals("\\)")) text = text.substring(1);
+        }
+        //".*" cannot be translate to "<*>" in the context of either re_group or re_class
+        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
+            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(text);
+        else res.add(new RE_LITERALS(new StringBuffer(text)));
 
     }
 
@@ -280,6 +281,22 @@ public class RegexListenerImpl implements RegexListener {
     @Override
     public void exitRe_factor_no_lb(RegexParser.Re_factor_no_lbContext ctx) {
 
+    }
+
+    @Override
+    public void enterS_wild(@NotNull RegexParser.S_wildContext ctx) {
+        if (!isValid()) return;
+        getSWild = true;
+        String txt = ctx.getText();
+        if (txt.equals(".") || txt.equals(".*") || txt.equals(".?") || txt.equals(".+") || txt.equals(".{0") || txt.equals(".{,")) {
+            if (res.size() > 0 && res.get(res.size() - 1) instanceof S_WILD) return;
+            res.add(new S_WILD());
+        }
+    }
+
+    @Override
+    public void exitS_wild(@NotNull RegexParser.S_wildContext ctx) {
+        getSWild = false;
     }
 
     @Override

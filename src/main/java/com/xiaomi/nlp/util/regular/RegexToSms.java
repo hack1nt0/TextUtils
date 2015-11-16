@@ -217,6 +217,15 @@ class RE_SEG {
     int span = 1;
     int offset = 0;
     int offset_span = 1;
+
+    public boolean match(String featWord) {
+        return true;
+    }
+
+    public boolean matchAny(Iterable<String> featWords) {
+        for (String featWord: featWords) if (match(featWord)) return true;
+        return false;
+    }
 }
 
 class S_TAG extends RE_SEG {
@@ -245,6 +254,7 @@ class S_CLASS extends RE_SEG {
 
 class S_GROUP extends RE_SEG {
     String choice;
+    String[] choices;
     String left_margin;
     String right_margin;
     String quant;
@@ -258,14 +268,11 @@ class S_GROUP extends RE_SEG {
             sb.append(c);
         }
         this.choice = sb.toString();
+        this.choices = this.choice.split("\\|");
         this.left_margin = left_margin;
         this.right_margin = right_margin;
         this.quant = quant;
 
-        if (!group_tags.containsKey(this.choice)) {
-            String tag = this.choice.split("\\|")[0];
-            group_tags.put(this.choice, "<!" + tag + ">");
-        }
 
         if (this.left_margin != null) {
             offset++;
@@ -278,7 +285,20 @@ class S_GROUP extends RE_SEG {
     }
 
     @Override
+    public boolean match(String featWord) {
+        for (String word: choices) if (word.equals(featWord)) return true;
+        return false;
+    }
+
+    @Override
     public String toString() {
+        //side effect, don't call it unless necessary. todo
+        if (!group_tags.containsKey(this.choice)) {
+            String tag = this.choices[0];
+            if (this.choices.length > 1) tag = "<!" + tag + ">";
+            group_tags.put(this.choice, tag);
+        }
+
         StringBuffer sb = new StringBuffer();
         if (left_margin != null) {
             sb.append("<*>");
@@ -313,6 +333,12 @@ class RE_LITERALS extends RE_SEG {
         if (words != null) return words;
         words = MyTokenizer.getInstance().getTokens(literals.toString());
         return words;
+    }
+
+    @Override
+    public boolean match(String featWord) {
+        for (String word: words) if (word.equals(featWord)) return true;
+        return false;
     }
 
     @Override

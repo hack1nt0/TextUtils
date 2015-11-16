@@ -305,6 +305,18 @@ public class RegexBaseListener implements RegexListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterS_wild(@NotNull RegexParser.S_wildContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitS_wild(@NotNull RegexParser.S_wildContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterRe_quant(@NotNull RegexParser.Re_quantContext ctx) { }
 	/**
 	 * {@inheritDoc}
