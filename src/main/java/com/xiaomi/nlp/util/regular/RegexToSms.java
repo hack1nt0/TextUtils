@@ -19,23 +19,23 @@ public class RegexToSms {
         Set<String> lower_word_feat = new HashSet<String>();
         String tag_name;
         Set<String> upper_word_feat = new HashSet<String>();
-        int lower_len;
-        int upper_len;
-        int lower_margin;
-        int upper_margin;
+        int len_lower_bound;
+        int len_upper_bound;
+        int margin_len_lower_bound;
+        int margin_len_upper_bound;
         int offset; //offset from head of sms pattern
 
-        public Knowledge(String name, String tag_name, String lower_word_feat, String upper_word_feat, int lower_len, int upper_len, int lower_margin, int upper_margin) {
+        public Knowledge(String name, String tag_name, String lower_word_feat, String upper_word_feat, int len_lower_bound, int len_upper_bound, int margin_len_lower_bound, int margin_len_upper_bound) {
             this.name = name;
             if (lower_word_feat != null)
                 for (String w: lower_word_feat.split("\\|")) if (w.trim().length() != 0) this.lower_word_feat.add(w);
             this.tag_name = tag_name;
             if (upper_word_feat != null)
                 for (String w: upper_word_feat.split("\\|")) if (w.trim().length() != 0) this.upper_word_feat.add(w);
-            this.lower_len = lower_len;
-            this.upper_len = upper_len;
-            this.lower_margin = lower_margin;
-            this.upper_margin = upper_margin;
+            this.len_lower_bound = len_lower_bound;
+            this.len_upper_bound = len_upper_bound;
+            this.margin_len_lower_bound = margin_len_lower_bound;
+            this.margin_len_upper_bound = margin_len_upper_bound;
         }
 
         public boolean match(List<RE_SEG> KL_ARR, int k, int i, int l) {
@@ -72,18 +72,18 @@ public class RegexToSms {
             sb.append(name + ':');
             String span_seq = "";
             for (int i = 0; i < span; ++i) {
-                if (i > 1) span_seq += "+";
                 span_seq += start_pos + i;
+                if (i < span - 1) span_seq += "+";
             }
             sb.append(span_seq);
             sb.append("\t");
-            if (lower_len != -1) sb.append("CharLenLonger:" + span_seq + ":" + lower_len);
+            if (len_lower_bound != -1) sb.append("CharLenLonger:" + span_seq + ":" + len_lower_bound);
             sb.append("\t");
-            if (upper_len != -1) sb.append("CharLenLess:" + span_seq + ":" + upper_len);
+            if (len_upper_bound != -1) sb.append("CharLenLess:" + span_seq + ":" + len_upper_bound);
             sb.append("\t");
-            if (lower_margin != -1) sb.append("CharLenLonger:" + (start_pos - 1) + ":" + lower_margin);
+            if (margin_len_lower_bound != -1) sb.append("CharLenLonger:" + (start_pos - 1) + ":" + margin_len_lower_bound);
             sb.append("\t");
-            if (upper_margin != -1) sb.append("CharLenLess:" + (start_pos + span) + ":" + upper_margin);
+            if (margin_len_upper_bound != -1) sb.append("CharLenLess:" + (start_pos + span) + ":" + margin_len_upper_bound);
             return sb.toString();
         }
     }
@@ -96,8 +96,8 @@ public class RegexToSms {
     static {
         knowledges.add(new Knowledge("Ext_RuZhangJinE", "money0", "收入|入账", "", 6, -1, -1, 3));
         knowledges.add(new Knowledge("Ext_RuZhangJinE", "money1", "收入|入账", "", 6, -1, -1, 3));
-        //knowledges.add(new Knowledge("Ext_XiaoFeiJinE", "money0", "支出|消费", "", 6, -1, -1, 3));
-        //knowledges.add(new Knowledge("Ext_XiaoFeiJinE", "money1", "支出|消费", "", 6, -1, -1, 3));
+        knowledges.add(new Knowledge("Ext_XiaoFeiJinE", "money0", "支出|消费", "", 6, -1, -1, 3));
+        knowledges.add(new Knowledge("Ext_XiaoFeiJinE", "money1", "支出|消费", "", 6, -1, -1, 3));
 
 
     }
@@ -131,29 +131,43 @@ public class RegexToSms {
                 ParseTreeWalker walker = new ParseTreeWalker();
                 RegexListenerImpl regexListener = new RegexListenerImpl();
                 walker.walk(regexListener, tree);
-                //pos -> knowledge id
-                List<Integer[]> demands = extractKL(regexListener.res);
+
+                ArrayList<RE_SEG> s_arr = regexListener.res;
+                List<Integer[]> demands = extractKL(s_arr);
                 if (demands.size() == 0) continue;
+
                 String identifier = identify(demands);
                 StringBuffer patternText = new StringBuffer();
                 StringBuffer patternConstrains = new StringBuffer();
-                int p = demands.get(0)[1];
-                int offset = 0;
+                int s_idx = 0;
+                int expand_offset = 0;
+
                 for (int i = 0; i < demands.size(); ++i) {
                     Integer[] interval = demands.get(i);
-                    p = demands.get(i)[1];
-                    if (p < demands.get(i)[1]) {
-                        patternText.append("<*>");
-                        offset++;
-                    } else if (p > demands.get(i)[1]) {
-                        p = demands.get(i - 1)[2] + 1;
-                    }
-                    patternConstrains.append(knowledges.get(interval[3]).toString(offset + interval[0] - interval[1], -1));
+                    int s_pos = interval[0];
+                    int kl_id = interval[1];
+                    int l_literal_pos = interval[2];
+                    int r_literal_pos = interval[3];
 
-                    while (p <= demands.get(i)[2]) {
-                        patternText.append(regexListener.res.get(p));
-                        offset += regexListener.res.get(p).span;
+                    s_idx = Math.max(s_idx, l_literal_pos);
+                    if (s_idx < l_literal_pos) {
+                        patternText.append(new S_WILD());
+                        expand_offset++;
+                        s_idx = l_literal_pos;
                     }
+
+                    while (s_idx < r_literal_pos) {
+                        RE_SEG re_seg = s_arr.get(s_idx);
+                        patternText.append(re_seg);
+                        if (s_idx == s_pos) {
+                            patternConstrains.append(knowledges.get(kl_id).toString(expand_offset + re_seg.offset, re_seg.offset_span));
+                        }
+                        expand_offset += re_seg.span;
+
+                        s_idx++;
+                    }
+
+
                 }
                 StringBuffer res = new StringBuffer();
                 res.append(identifier + " ::= ");
@@ -185,7 +199,8 @@ public class RegexToSms {
                 for (k = i - 1; k >= 0; --k) if (klArr.get(k) instanceof RE_LITERALS) break;
                 for (l = i + 1; l < klArr.size(); ++l) if (klArr.get(l) instanceof RE_LITERALS) break;
                 if (!knowledges.get(j).match(klArr, k, i, l)) continue;
-                res.add(new Integer[]{start_pos + klArr.get(i).offset, klArr.get(i).offset_span, j});
+                //pos, KL-id, L-literal, R-literal
+                res.add(new Integer[]{i, j, k, l});
             }
             start_pos += klArr.get(i).span;
         }
@@ -210,10 +225,10 @@ class S_TAG extends RE_SEG {
 
     public S_TAG(String tag_name) {
         this.tag_name = tag_name;
-        if (tag_name.equals("money0")) {
+        if (tag_name.startsWith("money")) {
             sub = "<#m><*>.<#m>";
             offset_span = 4;
-            span += offset_span - 1;
+            span = 4;
         }
     }
 
