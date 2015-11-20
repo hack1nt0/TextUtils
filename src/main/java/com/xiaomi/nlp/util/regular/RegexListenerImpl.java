@@ -18,6 +18,7 @@ public class RegexListenerImpl implements RegexListener {
     boolean getSClass= false;
     boolean getSTag = false;
     boolean getSWild = false;
+    boolean getNewGroup = false;
 
 
     @Override
@@ -28,11 +29,17 @@ public class RegexListenerImpl implements RegexListener {
     }
 
     boolean isValid() {
-        return !(getSGroup || getSClass || getSTag || getSWild);
+        return !(getSGroup || getSClass || getSTag || getSWild || getNewGroup);
     }
 
     @Override
     public void enterWildcard(RegexParser.WildcardContext ctx) {
+        if (!isValid()) return;
+        String text = ctx.getText();
+        //".*" cannot be translate to "<*>" in the context of either re_group or re_class
+        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
+            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(text);
+        else res.add(new RE_LITERALS(new StringBuffer(text)));
     }
 
     @Override
@@ -188,15 +195,6 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterRe_factor(RegexParser.Re_factorContext ctx) {
-        if (!isValid()) return;
-        String text = ctx.getText();
-        if (ctx.re_char() != null && ctx.re_char().re_esc_char() != null) {
-            if (text.equals("\\(") || text.equals("\\)")) text = text.substring(1);
-        }
-        //".*" cannot be translate to "<*>" in the context of either re_group or re_class
-        if (res.size() > 0 && res.get(res.size() - 1) instanceof RE_LITERALS)
-            ((RE_LITERALS)res.get(res.size() - 1)).literals.append(text);
-        else res.add(new RE_LITERALS(new StringBuffer(text)));
 
     }
 
@@ -237,10 +235,17 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterRe_group(RegexParser.Re_groupContext ctx) {
+        if (!isValid()) return;
+        getNewGroup = true;
+        String txt = ctx.getText();
+        if (txt.equals("([0-9.]+)") || txt.equals("([0-9.,]+)") || txt.equals("([0-9.-]+)")) res.add(new RE_LITERALS(new StringBuffer("<??金额>")));
+        else if (ctx.getText().equals("(.+)")) res.add(new S_WILD());
+        else res.add(new RE_LITERALS(new StringBuffer(ctx.getText())));
     }
 
     @Override
     public void exitRe_group(RegexParser.Re_groupContext ctx) {
+        getNewGroup = false;
     }
 
     @Override
@@ -341,7 +346,9 @@ public class RegexListenerImpl implements RegexListener {
 
     @Override
     public void enterRe_esc_char(RegexParser.Re_esc_charContext ctx) {
-
+        String text = ctx.getText();
+        if (text.equals("\\(") || text.equals("\\)")) text = text.substring(1);
+        res.add(new RE_LITERALS(new StringBuffer(text)));
     }
 
     @Override

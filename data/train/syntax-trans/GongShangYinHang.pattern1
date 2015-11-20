@@ -1,0 +1,30 @@
+<!segPunctution> ::= null
+<!task> ::= null
+<!version> ::= 2.1.2
+
+
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>支出<*><!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>支出<*>消费<*><!人民币|!空><*><#m><*>.<#m><!元><*><#m><*>.<#m>元<*>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>银行支出<*><!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>收入<*><!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>银行支出(<*>)<!人民币|!空><*><#m><*>.<#m><!元>，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>支出(消费)<no substitution for tag_name: numeric0><*>，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>网上银行支出(<*>)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行收入<*><!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行收入<*><!人民币|!空><*><#m><*>.<#m><!元>，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行收入<*><!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>网上银行支出(消费)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>支出(<*>取款)<!人民币|!空><*><#m><*>.<#m><!元>，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>支出(<*>消费)<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>网上银行收入(<*>)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行收入（<*>）<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>支出(消费)<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行收入(<*>)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>收入(现存)<!人民币|!空><*><#m><*>.<#m><!元>，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>银行支出(<*><no substitution for tag_name: numeric0><*>)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>网上银行支出(<*><no substitution for tag_name: numeric0><*>)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行支出（信使展期）<no substitution for tag_name: numeric0>元，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>支出<*><!人民币|!空><*><#m><*>.<#m><!元>。工银信用卡<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>工商银行收入（工资）<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0><*>银行支出(跨行汇款)<!人民币|!空><*><#m><*>.<#m><!元>，余额<!人民币|!空><*><#m><*>.<#m><!元>。<*>
+您<!卡号><*><no substitution for tag_name: card0>|!空><no substitution for tag_name: time0>手机银行支出(<*>)<!人民币|!空><*><#m><*>.<#m><!元>，余<*><#m><*>.<#m>元。<*>

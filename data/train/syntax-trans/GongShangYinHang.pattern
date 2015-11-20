@@ -1,15 +1,21 @@
-<!segPunctuation> ::= null
+<!segPunctution> ::= null
 <!task> ::= null
-<!币种1> ::= 人民币|RMB|￥
-<!币种2> ::= 元|人民币|RMB
+<!元> ::= 元|人民币|RMB
+<!人民币> ::= 人民币|RMB|￥
 <!version> ::= 2.1.2
 
-<?KXRZ> ::= 工商银行收入(<*>)<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:5+6+7	CharLenLess:4:3	CharLenLonger:5+6+7:6	Score:1:1.0
-<?KXRZ> ::= 网上银行收入(<*>)<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:5+6+7	CharLenLess:4:3	CharLenLonger:5+6+7:6	Score:1:1.0
-<?KXRZ> ::= 工商银行收入（工资）<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:3	CharLenLonger:3+4+5:6	Score:1:1.0
-<?KXRZ> ::= 工商银行收入（<*>）<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:5+6+7	CharLenLess:4:3	CharLenLonger:5+6+7:6	Score:1:1.0
-<?KXRZ> ::= 工商银行收入<*><!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:4+5+6	CharLenLess:3:3	CharLenLonger:4+5+6:6	Score:1:1.0
-<?KXRZ> ::= 收入(现存)<!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:3+4+5	CharLenLess:2:3	CharLenLonger:3+4+5:6	Score:1:1.0
-<?KXRZ> ::= 收入<*><!币种1><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:4+5+6	CharLenLess:3:3	CharLenLonger:4+5+6:6	Score:1:1.0
-<?KXRZ> ::= 收入<*><!币种1|!空><*><#m><*><#m><!币种2>	Ext_RuZhangJinE:4+5+6	CharLenLess:3:3	CharLenLonger:4+5+6:6	Score:1:1.0
 
+<?DEFAULT> ::= 支出<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 消费<*><!人民币|!空><*><#m><*>.<#m><!元><*><#m><*>.<#m>	Ext_XiaoFeiJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 银行支出<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 收入<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_RuZhangJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 工商银行收入<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_RuZhangJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 工商银行收入<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_RuZhangJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 工商银行收入<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_RuZhangJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 网上银行支出(消费)<!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:3+4+5+6	CharLenLonger:3+4+5+6:6			CharLenLess:7:3	Score:1:1.0
+<?DEFAULT> ::= 消费)<!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:3+4+5+6	CharLenLonger:3+4+5+6:6			CharLenLess:7:3	Score:1:1.0
+<?DEFAULT> ::= 支出(消费)<!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:3+4+5+6	CharLenLonger:3+4+5+6:6			CharLenLess:7:3	Score:1:1.0
+<?DEFAULT> ::= 收入(现存)<!人民币|!空><*><#m><*>.<#m><!元>	Ext_RuZhangJinE:3+4+5+6	CharLenLonger:3+4+5+6:6			CharLenLess:7:3	Score:1:1.0
+<?DEFAULT> ::= 支出<*><!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:4+5+6+7	CharLenLonger:4+5+6+7:6			CharLenLess:8:3	Score:1:1.0
+<?DEFAULT> ::= 工商银行收入（工资）<!人民币|!空><*><#m><*>.<#m><!元>	Ext_RuZhangJinE:3+4+5+6	CharLenLonger:3+4+5+6:6			CharLenLess:7:3	Score:1:1.0
+<?DEFAULT> ::= 银行支出(跨行汇款)<!人民币|!空><*><#m><*>.<#m><!元>	Ext_XiaoFeiJinE:3+4+5+6	CharLenLonger:3+4+5+6:6			CharLenLess:7:3	Score:1:1.0

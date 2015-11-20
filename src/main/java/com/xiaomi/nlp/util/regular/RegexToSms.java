@@ -109,12 +109,16 @@ public class RegexToSms {
     }
 
     public static void main(String[] args) throws Exception {
-        String inputFile = "GongShangYinHang";
-        BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream("data/train/syntax-trans/" + inputFile)));
-        PrintWriter out = new PrintWriter(new FileOutputStream("data/ret/syntax-trans/" + inputFile));
+        String filePath = "data/train/syntax-trans/X";
+        regexToSms(filePath, null);
+    }
+
+    public static void regexToSms(String filePath, ArrayList<Knowledge> KL_list) throws Exception {
+        BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
+        PrintWriter out = new PrintWriter(new FileOutputStream(filePath + ".pattern1"));
         LinkedList<String> ret = new LinkedList<String>();
 
-        ret.add("<!segPunctution> ::= " + segPunc);
+        ret.add("<!segPunctution> ::= null");
         ret.add("<!task> ::= " + task);
         ret.add("<!version> ::= " + version);
         ret.add("\n");
@@ -122,22 +126,32 @@ public class RegexToSms {
         while (true) {
             String line = in.readLine();
             if (line == null) break;
-            for (String seg: line.split("[" + segPunc + "]")) {
-                ANTLRInputStream input = new ANTLRInputStream(new StringReader(seg));
-                RegexLexer regexLexer = new RegexLexer(input);
-                CommonTokenStream tokens = new CommonTokenStream(regexLexer);
-                RegexParser regexParser = new RegexParser(tokens);
-                ParseTree tree = regexParser.s();
-                ParseTreeWalker walker = new ParseTreeWalker();
-                RegexListenerImpl regexListener = new RegexListenerImpl();
-                walker.walk(regexListener, tree);
+            //for (String seg: line.split("[" + segPunc + "]")) {
+            String seg = line;
+            ANTLRInputStream input = new ANTLRInputStream(new StringReader(seg));
+            RegexLexer regexLexer = new RegexLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(regexLexer);
+            RegexParser regexParser = new RegexParser(tokens);
+            ParseTree tree = regexParser.s();
+            ParseTreeWalker walker = new ParseTreeWalker();
+            RegexListenerImpl regexListener = new RegexListenerImpl();
+            walker.walk(regexListener, tree);
 
-                ArrayList<RE_SEG> s_arr = regexListener.res;
-                List<Integer[]> demands = extractKL(s_arr);
+            StringBuffer patternText = new StringBuffer();
+            ArrayList<RE_SEG> s_arr = regexListener.res;
+            if (KL_list == null) {
+                for (int i = 0; i < s_arr.size(); ++i) {
+                    if (i == s_arr.size() - 1 && (s_arr.get(i) instanceof S_WILD)) continue;
+                    patternText.append(s_arr.get(i).toString(patternText));
+                }
+                ret.add("<!DEFAULT> ::= " + patternText.toString() + "\tScore:1:1.0");
+
+            } else {
+
+                List<Integer[]> demands = extractKL(s_arr, KL_list);
                 if (demands.size() == 0) continue;
 
                 String identifier = identify(demands);
-                StringBuffer patternText = new StringBuffer();
                 StringBuffer patternConstrains = new StringBuffer();
                 int s_idx = 0;
                 int expand_offset = 0;
@@ -160,21 +174,21 @@ public class RegexToSms {
                         RE_SEG re_seg = s_arr.get(s_idx);
                         patternText.append(re_seg.toString(patternText));
                         if (s_idx == s_pos) {
-                            patternConstrains.append(knowledges.get(kl_id).toString(expand_offset + re_seg.offset(patternText), re_seg.offset_span));
+                            patternConstrains.append(KL_list.get(kl_id).toString(expand_offset + re_seg.offset(patternText), re_seg.offset_span));
                         }
                         expand_offset += re_seg.span(patternText);
 
                         s_idx++;
                     }
-
-
                 }
                 StringBuffer res = new StringBuffer();
                 res.append(identifier + " ::= ");
                 res.append(patternText);
                 res.append("\t");
-                res.append(patternConstrains);
-                res.append("\t");
+                if (patternConstrains.length() != 0) {
+                    res.append(patternConstrains);
+                    res.append("\t");
+                }
                 res.append("Score:1:1.0");
                 ret.add(res.toString());
             }
@@ -184,24 +198,26 @@ public class RegexToSms {
         for (String group_tag : S_GROUP.group_tags.keySet())
             ret.add(idx++, S_GROUP.group_tags.get(group_tag) + " ::= " + group_tag);
 
+        ret.add("<??金额> ::= <#m>.<#m>|||<#m>");
+
         for (int i = 0; i < ret.size(); ++i) out.println(ret.get(i));
         out.close();
     }
 
-    private static List<Integer[]> extractKL(ArrayList<RE_SEG> klArr) {
+    private static List<Integer[]> extractKL(ArrayList<RE_SEG> s_arr, ArrayList<Knowledge> KL_list) {
         ArrayList<Integer[]> res = new ArrayList<Integer[]>();
         int start_pos = 0;
-        for (int i = 0; i < klArr.size(); ++i) {
-            if (!(klArr.get(i) instanceof S_TAG)) continue;
-            for (int j = 0; j < knowledges.size(); ++j) {
+        for (int i = 0; i <  s_arr.size(); ++i) {
+            if (!( s_arr.get(i) instanceof S_TAG)) continue;
+            for (int j = 0; j < KL_list.size(); ++j) {
                 int k, l;
-                for (k = i - 1; k >= 0; --k) if (klArr.get(k) instanceof RE_LITERALS) break;
-                for (l = i + 1; l < klArr.size(); ++l) if (klArr.get(l) instanceof RE_LITERALS) break;
-                if (!knowledges.get(j).match(klArr, k, i, l)) continue;
+                for (k = i - 1; k >= 0; --k) if ( s_arr.get(k) instanceof RE_LITERALS) break;
+                for (l = i + 1; l <  s_arr.size(); ++l) if ( s_arr.get(l) instanceof RE_LITERALS) break;
+                if (!KL_list.get(j).match( s_arr, k, i, l)) continue;
                 //pos, KL-id, L-literal, R-literal
                 res.add(new Integer[]{i, j, k, l});
             }
-            start_pos += klArr.get(i).span;
+            start_pos +=  s_arr.get(i).span;
         }
         return res;
     }
@@ -366,6 +382,12 @@ class S_WILD extends RE_SEG {
 
     @Override
     public String toString() {
+        return "<*>";
+    }
+
+    @Override
+    public String toString(StringBuffer pre) {
+        if (pre.length() == 0 || RegexToSms.endWith(pre, "<*>")) return "";
         return "<*>";
     }
 }
