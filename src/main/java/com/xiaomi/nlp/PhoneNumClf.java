@@ -1,8 +1,11 @@
 package com.xiaomi.nlp;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Created by dy on 16-1-20.
@@ -12,11 +15,32 @@ public class PhoneNumClf {
     class Mark {
         String imei;
         int cat;
+
+        public String getImei() {
+            return imei;
+        }
+
+        public int getCat() {
+            return cat;
+        }
     }
 
     class Feedback {
         String imei;
         String text;
+        int originalCat;
+
+        public String getImei() {
+            return imei;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public int getOriginalCat() {
+            return originalCat;
+        }
     }
 
     class Record {
@@ -25,19 +49,25 @@ public class PhoneNumClf {
         int numOfVoters;
     }
 
-    String[] cat2name = {"位标记",};
+    String[] cat2name = {"未标记",};
 
     int w1 = -1;
     int w2 = -1;
 
+    public int getW1() {
+        return w1;
+    }
 
-    static class UserCreditRow {
-        float credit;
-        int numVotes;
+    public void setW1(int w1) {
+        this.w1 = w1;
+    }
 
-        UserCreditRow(String[] rowString){
+    public int getW2() {
+        return w2;
+    }
 
-        }
+    public void setW2(int w2) {
+        this.w2 = w2;
     }
 
     static class Vec {
@@ -85,9 +115,15 @@ public class PhoneNumClf {
         }
     }
 
-    private HashMap<String, UserCreditRow> userCredit = new HashMap<String, UserCreditRow>();
+    //imei -> credit
+    private HashMap<String, Float> userCredit = new HashMap<String, Float>();
+    //phone regex -> prior[]
     private HashMap<String, float[]> prior = new HashMap<String, float[]>();
-    private HashMap<Integer, String> feedbackDic = new HashMap<Integer, String>();
+    //phone regex -> phone description
+    private HashMap<String, String> priorDesc = new HashMap<String, String>();
+    //feedback cat regex
+    private List<String> feedbackDic = new ArrayList<String>();
+    private List<Pattern> feedbackDicPats = null;
 
     public PhoneNumClf(String userCreditFile, String priorFile, String feedbackDicFile) {
         try {
@@ -96,8 +132,7 @@ public class PhoneNumClf {
                 String line = in.readLine();
                 if (line == null) break;
                 String[] tmp = line.split("\\t");
-                String imei = tmp[0];
-                userCredit.put(imei, new UserCreditRow(tmp));
+                userCredit.put(tmp[0], Float.parseFloat(tmp[1]));
             }
 
             in = new BufferedReader(new InputStreamReader(new FileInputStream(priorFile)));
@@ -105,15 +140,15 @@ public class PhoneNumClf {
                 String line = in.readLine();
                 if (line == null) break;
                 String[] tmp = line.split("\\t");
-                prior.put(tmp[0], Vec.fromString(tmp[1]));
+                prior.put(tmp[0], Vec.fromString(tmp[2]));
+                priorDesc.put(tmp[0], tmp[1]);
             }
 
             in = new BufferedReader(new InputStreamReader(new FileInputStream(feedbackDicFile)));
             while (true) {
                 String line = in.readLine();
                 if (line == null) break;
-                String[] tmp = line.split("\\t");
-                feedbackDic.put(Integer.parseInt(tmp[0]), tmp[1]);
+                feedbackDic.add(line);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -123,11 +158,43 @@ public class PhoneNumClf {
     }
 
     private float getCredit(String imei) {
-        return 0;
+        if (!userCredit.containsKey(imei)) imei = "Unknown";
+        return userCredit.get(imei);
     }
 
-    private float[] getFeedbackVotes(String imei, String text) {
-        return new float[0];
+    private float[] getFeedbackVotes(List<Feedback> feedbacks) {
+        if (feedbackDicPats == null) {
+            int n = feedbackDic.size();
+            String notPrefix = feedbackDic.get(n - 2);
+            String notOriginal = feedbackDic.get(n - 1);
+            for (int i = 0; i < n - 2; ++i) feedbackDicPats.add(Pattern.compile(notPrefix + feedbackDic.get(i)));
+            for (int i = 0; i < n - 2; ++i) feedbackDicPats.add(Pattern.compile(feedbackDic.get(i)));
+            feedbackDicPats.add(Pattern.compile(notOriginal));
+        }
+        int numCat = cat2name.length;
+        float[] res = new float[numCat];
+        for (Feedback feedback: feedbacks) {
+            String text = feedback.getText();
+            float[] votes = new float[numCat];
+            int originalCat = feedback.getOriginalCat();
+            for (int i = 1; i < numCat; ++i)
+                if (feedbackDicPats.get(i - 1).matcher(text).find()) votes[i] = -1;
+            for (int i = 1; i < numCat; ++i) {
+                if (votes[i] != 0) continue;
+                if (feedbackDicPats.get(i - 2 + numCat).matcher(text).find()) votes[i] = +1;
+            }
+            if (originalCat != 0 && feedbackDicPats.get((numCat - 1) * 2).matcher(text).find())
+                votes[originalCat] = -1;
+
+            boolean existPos = false;
+            for (float vote: votes) if (vote > 0) existPos = true;
+            if (!existPos) votes[0] = +1;
+
+            float credit = getCredit(feedback.getImei());
+            votes = Vec.mul(credit, votes);
+            res = Vec.add(res, votes);
+        }
+        return res;
     }
 
     private float[] getPriorVotes(String no) {
@@ -135,7 +202,10 @@ public class PhoneNumClf {
             if (no.matches(catRegex)) return prior.get(catRegex);
         }
         float[] res = new float[cat2name.length];
-k   }
+        Arrays.fill(res, 1.0f / res.length);
+        return res;
+    }
+
     public int classify(String no, List<Mark> marks, List<Feedback> feedbacks, List<Record> records) {
         int numCat = cat2name.length;
 
@@ -149,10 +219,8 @@ k   }
         }
 
         float[] feedbackVotes = new float[numCat];
-        for (Feedback feedback: feedbacks) {
-            float[] votes = getFeedbackVotes(feedback.imei, feedback.text);
-            feedbackVotes = Vec.add(feedbackVotes, votes);
-        }
+        float[] votes = getFeedbackVotes(feedbacks);
+        feedbackVotes = Vec.add(feedbackVotes, votes);
 
         if (w1 == -1) w1 = feedbacks.size();
         if (w2 == -1) w2 = marks.size();
