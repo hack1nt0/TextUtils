@@ -14,21 +14,21 @@ import java.util.regex.Pattern;
 public class PhoneNumClf {
     class Mark {
         String imei;
-        int cat;
+        int catId;
 
         public String getImei() {
             return imei;
         }
 
-        public int getCat() {
-            return cat;
+        public int getCatId() {
+            return catId;
         }
     }
 
     class Feedback {
         String imei;
         String text;
-        int originalCat;
+        int originalCatId;
 
         public String getImei() {
             return imei;
@@ -38,15 +38,16 @@ public class PhoneNumClf {
             return text;
         }
 
-        public int getOriginalCat() {
-            return originalCat;
+        public int getOriginalCatId() {
+            return originalCatId;
         }
     }
 
     class Record {
-        String app;
-        int cat;
-        int numOfVoters;
+        int provider;
+        int catId;
+        int count;
+
     }
 
     String[] cat2name = {"未标记",};
@@ -74,7 +75,7 @@ public class PhoneNumClf {
         static float[] fromString(String s) {
             if (s.length() < 2) throw new IllegalArgumentException("Vec string length less than 2.");
             s = s.substring(1, s.length() - 1);
-            String[] tmp = s.split(",");
+            String[] tmp = s.split(" ");
             float[] res = new float[tmp.length];
             for (int i = 0; i < res.length; ++i) res[i] = Float.parseFloat(tmp[i]);
             return res;
@@ -124,6 +125,7 @@ public class PhoneNumClf {
     //feedback cat regex
     private List<String> feedbackDic = new ArrayList<String>();
     private List<Pattern> feedbackDicPats = null;
+    private int feedbackLowerBound;
 
     public PhoneNumClf(String userCreditFile, String priorFile, String feedbackDicFile) {
         try {
@@ -132,7 +134,7 @@ public class PhoneNumClf {
                 String line = in.readLine();
                 if (line == null) break;
                 String[] tmp = line.split("\\t");
-                userCredit.put(tmp[0], Float.parseFloat(tmp[1]));
+                userCredit.put(trimQuote(tmp[0]), Float.parseFloat(tmp[1]));
             }
 
             in = new BufferedReader(new InputStreamReader(new FileInputStream(priorFile)));
@@ -140,15 +142,15 @@ public class PhoneNumClf {
                 String line = in.readLine();
                 if (line == null) break;
                 String[] tmp = line.split("\\t");
-                prior.put(tmp[0], Vec.fromString(tmp[2]));
-                priorDesc.put(tmp[0], tmp[1]);
+                prior.put(trimQuote(tmp[1]), Vec.fromString(trimQuote(tmp[2])));
+                priorDesc.put(trimQuote(tmp[1]), trimQuote(tmp[0]));
             }
 
             in = new BufferedReader(new InputStreamReader(new FileInputStream(feedbackDicFile)));
             while (true) {
                 String line = in.readLine();
                 if (line == null) break;
-                feedbackDic.add(line);
+                feedbackDic.add(trimQuote(line));
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -157,34 +159,51 @@ public class PhoneNumClf {
         }
     }
 
+    private String trimQuote(String s) {
+        if (s.length() < 2) throw new IllegalArgumentException("s is not quoted.");
+        return s.substring(1, s.length() - 1);
+    }
+
     private float getCredit(String imei) {
         if (!userCredit.containsKey(imei)) imei = "Unknown";
         return userCredit.get(imei);
     }
 
-    private float[] getFeedbackVotes(List<Feedback> feedbacks) {
+    private float[] getFeedbackVotes(List<Feedback> feedbacks) { // TODO: 16/1/28
         if (feedbackDicPats == null) {
             int n = feedbackDic.size();
-            String notPrefix = feedbackDic.get(n - 2);
-            String notOriginal = feedbackDic.get(n - 1);
-            for (int i = 0; i < n - 2; ++i) feedbackDicPats.add(Pattern.compile(notPrefix + feedbackDic.get(i)));
-            for (int i = 0; i < n - 2; ++i) feedbackDicPats.add(Pattern.compile(feedbackDic.get(i)));
+            feedbackLowerBound = Integer.parseInt(feedbackDic.get(n - 1));
+            String notPrefix = feedbackDic.get(n - 3);
+            String notOriginal = feedbackDic.get(n - 2);
+            for (int i = 0; i < n - 3; ++i) feedbackDicPats.add(Pattern.compile(notPrefix + feedbackDic.get(i)));
+            for (int i = 0; i < n - 3; ++i) feedbackDicPats.add(Pattern.compile(feedbackDic.get(i)));
             feedbackDicPats.add(Pattern.compile(notOriginal));
         }
+
         int numCat = cat2name.length;
         float[] res = new float[numCat];
+
+        if (feedbacks.size() <= feedbackLowerBound) {
+            float avgCredit = 0.0f;
+            for (Feedback feedback: feedbacks) avgCredit += getCredit(feedback.getImei());
+            avgCredit /= feedbacks.size();
+            if (avgCredit <= getCredit("Unknown")) {
+                return res;
+            }
+        }
+
         for (Feedback feedback: feedbacks) {
             String text = feedback.getText();
             float[] votes = new float[numCat];
-            int originalCat = feedback.getOriginalCat();
+            int originalCatId = feedback.getOriginalCatId();
             for (int i = 1; i < numCat; ++i)
                 if (feedbackDicPats.get(i - 1).matcher(text).find()) votes[i] = -1;
             for (int i = 1; i < numCat; ++i) {
                 if (votes[i] != 0) continue;
                 if (feedbackDicPats.get(i - 2 + numCat).matcher(text).find()) votes[i] = +1;
             }
-            if (originalCat != 0 && feedbackDicPats.get((numCat - 1) * 2).matcher(text).find())
-                votes[originalCat] = -1;
+            if (originalCatId != 0 && feedbackDicPats.get((numCat - 1) * 2).matcher(text).find())
+                votes[originalCatId] = -1;
 
             boolean existPos = false;
             for (float vote: votes) if (vote > 0) existPos = true;
@@ -213,9 +232,9 @@ public class PhoneNumClf {
 
         float[] userCreditVotes = new float[numCat];
         for (Mark mark : marks) {
-            int cat = mark.cat;
+            int catId = mark.getCatId();
             float credit = getCredit(mark.imei);
-            userCreditVotes[cat] += credit;
+            userCreditVotes[catId] += credit;
         }
 
         float[] feedbackVotes = new float[numCat];
@@ -231,10 +250,39 @@ public class PhoneNumClf {
         return finalCat;
     }
 
+    static String javaTestDataFile = "/Users/DY/Desktop/I2NLP/Assignment0/data/java_test_data.csv";
+    static String userCreditFile = "/Users/DY/Desktop/I2NLP/Assignment0/data/anti_mark_user_credit_model.csv";
+    static String priorFile = "/Users/DY/Desktop/I2NLP/Assignment0/data/prior_model.csv";
+    static String feedbackDicFile = "/Users/DY/Desktop/I2NLP/Assignment0/data/anti_feedback_model.csv";
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        long t1 = System.currentTimeMillis();
+        PhoneNumClf clf = new PhoneNumClf(userCreditFile, priorFile, feedbackDicFile);
 
+        long t2 = System.currentTimeMillis();
+        System.out.println("Initial step costed " +  ((t2 - t1) / 1000.0) + " s");
+
+        //test
+        BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream("javaTestDataFile")));
+        PrintWriter out = new PrintWriter(new BufferedOutputStream(new FileOutputStream("data/java_test_data_output.csv")));
+        while (true) {
+            String line = in.readLine();
+            if (line == null) break;
+            String[] tmp = line.split("\\t");
+            String no = tmp[0];
+            List<Record> records = new ArrayList<Record>();
+            records.add(Record.fromString(tmp[1]));
+
+            List<Feedback> feedbacks = Feedback.fromString(tmp[2]);
+
+            List<Mark> marks = Mark.fromString(tmp[3] + '\t' + tmp[4]);
+
+            int finalCatId = clf.classify(no, marks, feedbacks, records);
+
+            out.println(line + '\t' + finalCatId);
+        }
+        out.close();
     }
 }
 
