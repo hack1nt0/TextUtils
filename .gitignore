@@ -9,4 +9,6 @@ buildNumber.properties
 TextUtils.iml
 .idea/
 *.iml
+output/
+out/
 

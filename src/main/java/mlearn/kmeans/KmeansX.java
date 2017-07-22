@@ -1,0 +1,246 @@
+package mlearn.kmeans;
+
+import mlearn.*;
+import template.debug.RandomUtils;
+import template.debug.Stopwatch;
+import template.numbers.DoubleUtils;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.IntStream;
+
+/**
+ * @author dy[jealousing@gmail.com] on 17-5-14.
+ */
+
+/**
+ * (Elkan) Using the Triangle Inequality to Accelerate k-Means
+ * drawback : floating unstable, the lower bound may be larger than actual value (not satisfied lower_bound <= v <= upper_bound)
+ */
+public class KmeansX extends Clusterer {
+    @Override
+    public ClusterResult cluster(Object data) {
+        throw new UnsupportedOperationException();
+    }
+
+    public KmeansResult cluster(DocumentTermMatrix dtm) {
+        return cluster(dtm, 100, -1, 10);
+    }
+
+    public static KmeansResult cluster(DocumentTermMatrix dtm, int k, int rn, int maxIter) {
+        System.out.printf("K-meansX running k = %d, rn = %d, maxItr = %d\n", k, rn, maxIter);
+        long beginKmeans = System.currentTimeMillis();
+        int n = dtm.rows();
+        int m = dtm.cols();
+        //for clazz
+        double[][] centroid = new double[k][m];
+        double[][] centroidAcc = new double[k][m];
+        int[] capacity = new int[k];
+        double[][] distBtwCentroids = new double[k][k];
+        double[] distBtwItr = new double[k];
+        int[][] clazzDiff = new int[k][n];
+        boolean[] clazzUpdated = new boolean[k];
+
+        //for data point
+        int[] clazz = new int[n];
+        double[][] lower = new double[n][k];
+        double[] upper = new double[n];
+        double[] distToClosestCentroid = new double[n];
+        boolean[] isUpperTight = new boolean[n];
+
+        //for stat
+        int[] invokes = new int[n];
+        boolean[] changed = new boolean[n];
+        int actualItr = maxIter;
+
+        //centroids initialization by kmeans++
+        kmeansPP(k, dtm, clazz, distToClosestCentroid, centroid, centroidAcc, capacity, lower, upper);
+
+        for (int iter = 0; iter < maxIter; ++iter) {
+            long beginItr = System.currentTimeMillis();
+            Arrays.fill(invokes, 0);
+            Arrays.fill(changed, false);
+
+            updateDistBtwCentroid(centroid, distBtwCentroids);
+
+            IntStream.range(0, n)
+                    .parallel()
+                    .forEach(di -> {
+                        Document d = dtm.get(di);
+                        for (int ki = 0; ki < k; ++ki) {
+                            if (ki == clazz[di]) continue;
+                            if (upper[di] <= lower[di][ki] || upper[di] * 2 <= distBtwCentroids[clazz[di]][ki]) continue;
+                            if (!isUpperTight[di]) {
+                                isUpperTight[di] = true;
+                                distToClosestCentroid[di] = upper[di] = lower[di][clazz[di]] = d.squaredDistance(centroid[clazz[di]]);
+                                invokes[di]++;
+                            }
+                            if (distToClosestCentroid[di] <= lower[di][ki] || distToClosestCentroid[di] * 2 <= distBtwCentroids[clazz[di]][ki]) continue;
+                            double distToKi = d.squaredDistance(centroid[ki]);
+//                            if (DoubleUtils.compare(lower[di][ki], distToKi, 1e-2) > 0) {
+//                                System.out.printf("%f %f\n", lower[di][ki], distToKi);
+//                                throw new RuntimeException();
+//                            }
+                            lower[di][ki] = distToKi;
+                            invokes[di]++;
+                            if (distToKi < distToClosestCentroid[di]) {
+                                distToClosestCentroid[di] = upper[di] = distToKi;
+                                clazzDiff[clazz[di]][di]--;
+                                clazz[di] = ki;
+                                clazzDiff[clazz[di]][di]++;
+                                changed[di] = true;
+                            }
+                        }
+            });
+
+            Arrays.fill(clazzUpdated, false);
+            for (int ki = 0; ki < k; ++ki) {
+                for (int di = 0; di < n; ++di) {
+                    if (clazzDiff[ki][di] == 0) continue;
+                    clazzUpdated[ki] = true;
+                    Document d = dtm.get(di);
+                    if (clazzDiff[ki][di] < 0) {
+                        capacity[ki]--;
+                        for (int i = 0; i < d.n; ++i) centroidAcc[ki][d.index[i]] -= d.data[i];
+                    } else {
+                        capacity[ki]++;
+                        for (int i = 0; i < d.n; ++i) centroidAcc[ki][d.index[i]] += d.data[i];
+                    }
+                    clazzDiff[ki][di] = 0;
+                }
+//                if (capacity[ki] < 0) {
+//                    System.out.println(capacity[ki]);
+//                    throw new RuntimeException();
+//                }
+                distBtwItr[ki] = 0.;
+                if (!clazzUpdated[ki]) continue;
+                if (capacity[ki] == 0) {
+                    Arrays.fill(centroid[ki], 0);
+                    continue;
+                }
+                for (int mi = 0; mi < m; ++mi) {
+                    double nv = centroidAcc[ki][mi] / capacity[ki];
+                    distBtwItr[ki] += (nv - centroid[ki][mi]) * (nv - centroid[ki][mi]);
+                    centroid[ki][mi] = nv;
+                }
+            }
+
+            for (int di = 0; di < n; ++di) {
+                if (clazzUpdated[clazz[di]]) {
+                    upper[di] += distBtwItr[clazz[di]];
+                    isUpperTight[di] = false;
+                }
+                for (int ki = 0; ki < k; ++ki) lower[di][ki] = Math.max(0, lower[di][ki] - distBtwItr[ki]);
+            }
+
+            int totInvokes = Arrays.stream(invokes).sum();
+            int totChanged = 0;
+            for (int di = 0; di < n; ++di) if (changed[di]) totChanged++;
+            System.out.printf("iteration %2d, (upper) squared cost %15.3f, data changed (%5d / %5d = %6.3f%%), ", iter, Arrays.stream(upper).sum(), totChanged, n, totChanged * 100. / n);
+            System.out.printf("squared dist invoking counts (%8d / %8d = %6.3f%%), ", totInvokes, (k * n), totInvokes * 100. / k / n);
+            System.out.printf("time cost %10.3f\n", (System.currentTimeMillis() - beginItr) / 1000.);
+            if (totChanged == 0) {
+                actualItr = iter;
+                break;
+            }
+        }
+
+        //summary
+        Stopwatch.tic();
+        for (int di = 0; di < n; ++di) if (!isUpperTight[di]) distToClosestCentroid[di] = dtm.get(di).squaredDistance(centroid[clazz[di]]);
+        Stopwatch.toc();
+        double squaredCost = Arrays.stream(distToClosestCentroid).sum();
+        System.out.printf("K-meansX with k = %d, rn = %d, maxItr = %d, actual Itr = %d, squared cost %.3f, time cost %.3f \n", k, rn, maxIter, actualItr, squaredCost, (System.currentTimeMillis() - beginKmeans) / 1000.);
+        return new KmeansResult(clazz, centroid, capacity, squaredCost, dtm);
+    }
+
+    private static void kmeansPP(int k, DocumentTermMatrix dtm, int[] clazz, double[] distToClosestCentroid, double[][] centroid, double[][] centroidAcc, int[] capacity, double[][] lower, double[] upper) {
+        long begin = System.currentTimeMillis();
+        int n = dtm.rows();
+        int m = dtm.cols();
+        int[] chosen = new int[k];
+        IntStream.range(0, n)
+                .parallel()
+                .forEach(di -> dtm.get(di).normalize());
+
+        Arrays.fill(distToClosestCentroid, Double.MAX_VALUE);
+        Arrays.fill(clazz, -1);
+        Arrays.fill(chosen, -1);
+        boolean[] used = new boolean[n];
+        for (int ki = 0; ki < k; ++ki) {
+            if (ki == 0) {
+                int cdi = RandomUtils.uniform(n);
+                used[cdi] = true;
+                chosen[ki] = cdi;
+                Document cd = dtm.get(cdi);
+                for (int di = 0; di < n; ++di) {
+                    clazz[di] = ki;
+                    distToClosestCentroid[di] = upper[di] = lower[di][ki] = cd.squaredDistance(dtm.get(di));
+                }
+                capacity[ki] = n;
+                continue;
+            }
+            while (true) {
+                int cdi = RandomUtils.discreteX(distToClosestCentroid);
+                if (used[cdi]) continue;
+                used[cdi] = true;
+                chosen[ki] = cdi;
+                Document cd = dtm.get(cdi);
+                for (int di = 0; di < n; ++di) {
+                    double dist2Ki = dtm.get(di).squaredDistance(cd);
+                    lower[di][ki] = dist2Ki;
+                    if (used[di]) continue;
+                    if (DoubleUtils.compare(dist2Ki, distToClosestCentroid[di]) < 0) {
+                        distToClosestCentroid[di] = upper[di] = dist2Ki;
+                        capacity[clazz[di]]--;
+                        clazz[di] = ki;
+                        capacity[clazz[di]]++;
+                    }
+                }
+                break;
+            }
+        }
+        System.out.println(Arrays.toString(capacity));
+        for (int di = 0; di < n; ++di) {
+            Document d = dtm.get(di);
+            int ki = clazz[di];
+            for (int i = 0; i < d.n; ++i) centroidAcc[ki][d.index[i]] += d.data[i];
+        }
+        for (int ki = 0; ki < k; ++ki) {
+            if (capacity[ki] == 0) continue;
+            for (int mi = 0; mi < m; ++mi) centroid[ki][mi] = centroidAcc[ki][mi] / capacity[ki];
+            double distBtwItr = dtm.get(chosen[ki]).squaredDistance(centroid[ki]);
+            for (int di = 0; di < n; ++di) {
+                if (clazz[di] == ki) upper[di] += distBtwItr;
+                double nv = Math.max(0, lower[di][ki] - distBtwItr);
+//                if (!(nv <= dtm.get(di).squaredDistance(centroid[ki]))) {
+//                    System.out.println(nv + " " + dtm.get(di).squaredDistance(centroid[ki]) + " " + lower[di][ki] + " " + distBtwItr);
+//                    throw new RuntimeException();
+//                }
+                lower[di][ki] = nv;
+            }
+        }
+        Arrays.sort(chosen);
+        System.out.printf("Initialization K-means++ data chosen %s, cost %.3fs \n", Arrays.toString(chosen), (System.currentTimeMillis() - begin) / 1000.);
+    }
+
+    private static void updateDistBtwCentroid(double[][] centroid, double[][] res) {
+        int k = centroid.length;
+        int m = centroid[0].length;
+        for (int from = 0; from < k; ++from)
+            for (int to = from + 1; to < k; ++to) {
+                for (int mi = 0; mi < m; ++mi) {
+                    res[from][to] += (centroid[from][mi] - centroid[to][mi]) * (centroid[from][mi] - centroid[to][mi]);
+                }
+                res[to][from] = res[from][to];
+            }
+    }
+
+    public static void main(String[] args) {
+//        List<String>[] csv = FileUtils.readCsv("/Users/dy/Downloads/people_wiki.csv", true);
+//        DocumentTermMatrix trains = DocumentTermMatrix.asTrain(csv[2], csv[1]);
+//        System.out.println(trains);
+//        KmeansResult result = new KmeansX().cluster(trains);
+//        System.out.println(result.toString());
+    }
+}
