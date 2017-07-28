@@ -1,16 +1,13 @@
-// Generated from /Users/dy/AC/src/main/java/wikipedia/mediawiki.g4 by ANTLR 4.7
+// Generated from /Users/dy/TextUtils/src/main/java/syntax/wikipedia/mediawiki.g4 by ANTLR 4.7
 package syntax.wikipedia;
-
-import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.atn.ATN;
-import org.antlr.v4.runtime.atn.ATNDeserializer;
-import org.antlr.v4.runtime.atn.ParserATNSimulator;
-import org.antlr.v4.runtime.atn.PredictionContextCache;
+import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
-import org.antlr.v4.runtime.tree.ParseTreeListener;
-import org.antlr.v4.runtime.tree.TerminalNode;
-
+import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.misc.*;
+import org.antlr.v4.runtime.tree.*;
 import java.util.List;
+import java.util.Iterator;
+import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class mediawikiParser extends Parser {
@@ -273,7 +270,7 @@ public class mediawikiParser extends Parser {
 					_errHandler.recoverInline(this);
 					}
 					else {
-						if ( _input.LA(1)== Token.EOF ) matchedEOF = true;
+						if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
 						_errHandler.reportMatch(this);
 						consume();
 					}
@@ -322,7 +319,7 @@ public class mediawikiParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(54);
+			setState(54); 
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			do {
@@ -334,13 +331,13 @@ public class mediawikiParser extends Parser {
 				_errHandler.recoverInline(this);
 				}
 				else {
-					if ( _input.LA(1)== Token.EOF ) matchedEOF = true;
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
 					_errHandler.reportMatch(this);
 					consume();
 				}
 				}
 				}
-				setState(56);
+				setState(56); 
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 			} while ( (((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__0) | (1L << T__1) | (1L << T__3) | (1L << T__4) | (1L << T__5) | (1L << T__6) | (1L << T__7) | (1L << FORMAT_TAG) | (1L << REFERENCE) | (1L << IMAGE_RADIO) | (1L << CATEGORY) | (1L << ENTITY) | (1L << CHAR) | (1L << WS))) != 0) );
@@ -572,7 +569,7 @@ public class mediawikiParser extends Parser {
 			{
 			setState(72);
 			match(T__4);
-			setState(74);
+			setState(74); 
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			do {
@@ -582,7 +579,7 @@ public class mediawikiParser extends Parser {
 				match(CHAR);
 				}
 				}
-				setState(76);
+				setState(76); 
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 			} while ( _la==CHAR );
@@ -627,7 +624,7 @@ public class mediawikiParser extends Parser {
 			int _alt;
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(81);
+			setState(81); 
 			_errHandler.sync(this);
 			_alt = 1;
 			do {
@@ -643,7 +640,7 @@ public class mediawikiParser extends Parser {
 				default:
 					throw new NoViableAltException(this);
 				}
-				setState(83);
+				setState(83); 
 				_errHandler.sync(this);
 				_alt = getInterpreter().adaptivePredict(_input,8,_ctx);
 			} while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER );
@@ -759,7 +756,7 @@ public class mediawikiParser extends Parser {
 			{
 			setState(89);
 			match(T__5);
-			setState(92);
+			setState(92); 
 			_errHandler.sync(this);
 			_alt = 1+1;
 			do {
@@ -783,7 +780,7 @@ public class mediawikiParser extends Parser {
 						_errHandler.recoverInline(this);
 						}
 						else {
-							if ( _input.LA(1)== Token.EOF ) matchedEOF = true;
+							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
 							_errHandler.reportMatch(this);
 							consume();
 						}
@@ -795,7 +792,7 @@ public class mediawikiParser extends Parser {
 				default:
 					throw new NoViableAltException(this);
 				}
-				setState(94);
+				setState(94); 
 				_errHandler.sync(this);
 				_alt = getInterpreter().adaptivePredict(_input,10,_ctx);
 			} while ( _alt!=1 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER );

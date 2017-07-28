@@ -8,10 +8,9 @@ import java.util.*;
 public class Counter<K> {
     HashMap<K, Long> map = new HashMap<>();
 
-    public long add(K key) {
+    public void add(K key) {
         long old = map.getOrDefault(key, 0L);
         map.put(key, old + 1);
-        return old + 1;
     }
 
     public void add(K key, long delta) { map.put(key, get(key) + delta); }
@@ -20,7 +19,7 @@ public class Counter<K> {
 
     @Override
     public String toString() {
-        return reverse().toString();
+        return toList().toString();
     }
 
     public TreeMap<Long, List<K>> reverse() {
@@ -50,9 +49,7 @@ public class Counter<K> {
     }
 
     public static <K> Counter<K> from(K[] terms) {
-        Counter<K> counter = new Counter<K>();
-        for (K term : terms) counter.add(term);
-        return counter;
+        return from(Arrays.asList(terms));
     }
 
     public static Counter<Integer> from(int[] terms) {
@@ -61,7 +58,7 @@ public class Counter<K> {
         return counter;
     }
 
-    public static <K> Counter<K> from(List<K> terms) {
+    public static <K> Counter<K> from(Collection<K> terms) {
         Counter<K> counter = new Counter<K>();
         for (K term : terms) counter.add(term);
         return counter;

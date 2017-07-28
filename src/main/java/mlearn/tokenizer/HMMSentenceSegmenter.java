@@ -12,7 +12,7 @@ public class HmmSentenceSegmenter implements ISentenceSegmenter {
 
     @Override
     public List<Sentence> split(String text) {
-//        List<Word> tokens = tokenizer.split(text);
+//        List<Word> tokens = tokenizer.split0(text);
 //        List<Sentence> ret = new ArrayList<Sentence>();
 //        List<String> buf = new ArrayList<String>();
 //        for (int i = 0; i < tokens.size(); ++i) {

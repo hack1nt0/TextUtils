@@ -1,9 +1,8 @@
 package mlearn;
 
-import mlearn.dataframe.DataFrame;
+import mlearn.tokenizer.Tokenizer;
 
 import java.io.PrintWriter;
-import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -15,50 +14,42 @@ import java.util.stream.IntStream;
  *
  * DTM as Compressed sparse row (CSR)
  */
-public class BowDocumentTermMatrix implements Iterable<BagOfWords>, Serializable {
+public class BowDocumentTermMatrix implements Iterable<BagOfWords> {
     public BagOfWords[] matrix;
     public ConcurrentIndexer termIndexer;
-    public List<String> classes;
     public int nrow, ncol;
     public double constructionTime;
 
-    private BowDocumentTermMatrix(List<String> txts, List<String> classes, List<Integer> ids) {
-        assert txts.size() == classes.size();
+    public BowDocumentTermMatrix(List<List<String>> txts) {
         long begin = System.currentTimeMillis();
-        this.classes = classes;
         this.nrow = txts.size();
         this.matrix = new BagOfWords[nrow];
         this.termIndexer = new ConcurrentIndexer();
-        EnglishTokenizer tokenizer = EnglishTokenizer.asInstance();
         /* tf */
         IntStream.range(0, txts.size())
                 .parallel()
                 .forEach(r -> {
-                    List<String> words = tokenizer.english(txts.get(r));
+                    List<String> words = txts.get(r);
                     int[] bag = new int[words.size()];
                     for (int i = 0; i < words.size(); ++i) {
                         int wid = termIndexer.getOrAdd(words.get(i));
                         bag[i] = wid;
                     }
-                    matrix[r] = new BagOfWords(bag, termIndexer, classes.get(r), ids != null ? ids.get(r): r);
+                    matrix[r] = new BagOfWords(bag, termIndexer);
                 });
-        this.ncol = Arrays.stream(matrix).mapToInt(d -> d.n).max().getAsInt();
+        this.ncol = Arrays.stream(matrix).mapToInt(d -> d.size).max().getAsInt();
         constructionTime = (System.currentTimeMillis() - begin) / 1000.;
     }
 
-    private BowDocumentTermMatrix(List<String> txts, List<String> classes, BowDocumentTermMatrix trains, List<Integer> ids) {
-        assert txts.size() == classes.size();
+    public BowDocumentTermMatrix(List<List<String>> txts, BowDocumentTermMatrix trains) {
         long begin = System.currentTimeMillis();
-        this.classes = classes;
-        this.classes = classes;
         this.nrow = txts.size();
         this.matrix = new BagOfWords[nrow];
         this.termIndexer = trains.termIndexer;
-        EnglishTokenizer tokenizer = EnglishTokenizer.asInstance();
         IntStream.range(0, txts.size())
                 .parallel()
                 .forEach(r -> {
-                    List<String> words = tokenizer.english(txts.get(r));
+                    List<String> words = txts.get(r);
                     int[] bag = new int[words.size()];
                     for (int i = 0; i < words.size(); ++i) {
                         String w = words.get(i);
@@ -66,46 +57,29 @@ public class BowDocumentTermMatrix implements Iterable<BagOfWords>, Serializable
                         int wid = termIndexer.getId(w);
                         bag[i] = wid;
                     }
-                    matrix[r] = new BagOfWords(bag, termIndexer, classes.get(r), ids != null ? ids.get(r) : r);
+                    matrix[r] = new BagOfWords(bag, termIndexer);
                 });
-        this.ncol = Arrays.stream(matrix).mapToInt(d -> d.n).max().getAsInt();
+        this.ncol = Arrays.stream(matrix).mapToInt(d -> d.size).max().getAsInt();
         constructionTime = (System.currentTimeMillis() - begin) / 1000.;
     }
 
-    public static BowDocumentTermMatrix asTrain(List<String> txts, List<String> classes, List<Integer> ids) {
-        return new BowDocumentTermMatrix(txts, classes, ids);
-    }
-
-    public static BowDocumentTermMatrix asTrain(List<String> txts, List<String> classes) {
-        return new BowDocumentTermMatrix(txts, classes, null);
-    }
-
-    public static BowDocumentTermMatrix asTest(List<String> txts, List<String> classes, BowDocumentTermMatrix trains, List<Integer> ids) {
-        return new BowDocumentTermMatrix(txts, classes, trains, ids);
-    }
-
-    public static BowDocumentTermMatrix asTest(List<String> txts, List<String> classes, BowDocumentTermMatrix trains) {
-        return new BowDocumentTermMatrix(txts, classes, trains, null);
-    }
 
     public BagOfWords get(int docId) {
         return matrix[docId];
     }
 
-    public String getClass(int docId) { return classes.get(docId); }
+    @Override
+    public Iterator<BagOfWords> iterator() {
+        return Arrays.asList(matrix).iterator();
+    }
 
     public String toString() {
         StringWriter stringWriter = new StringWriter();
         PrintWriter out = new PrintWriter(stringWriter);
         double density = 0;
-        for (BagOfWords d : matrix) density += d.n;
+        for (BagOfWords d : matrix) density += d.size;
         density = density * 100. / this.nrow / this.ncol;
         out.printf("Document-Term Matrix(dtm) %d documents x %d words, density %.3f%%, time cost %.3fs \n", this.nrow, this.ncol, density, constructionTime);
-        return null;
-    }
-
-    @Override
-    public Iterator<BagOfWords> iterator() {
-        return Arrays.asList(matrix).iterator();
+        return stringWriter.toString();
     }
 }

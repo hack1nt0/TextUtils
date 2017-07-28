@@ -1,8 +1,6 @@
-import template.debug.InputReader;
-import template.debug.InputReaderUnicode;
+import template.debug.ScannerUTF8;
 
 import java.io.*;
-import java.util.Scanner;
 
 /**
  * @author dy[jealousing@gmail.com] on 17-7-18.
@@ -13,7 +11,7 @@ public class Tmp {
 //        PrintWriter out = new PrintWriter(new BufferedOutputStream(new FileOutputStream("data/train/spamsms.json")));
 //        out.println('[');
 //        while (in.hasNext()) {
-//            out.printf("%s, \n", in.nextLine());
+//            out.printf("%s, \size", in.nextLine());
 //        }
 //        out.println(']');
 //        in.close();
@@ -21,7 +19,7 @@ public class Tmp {
 
         int v = 0x2F81A;
         String str = new String(new int[]{v}, 0, 1);
-        InputReaderUnicode in = new InputReaderUnicode(new StringReader(str));
+        ScannerUTF8 in = new ScannerUTF8(new StringBufferInputStream(str));
         while (!in.isExhausted()) {
             System.out.println(in.nextString());
         }

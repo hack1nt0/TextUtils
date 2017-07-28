@@ -8,11 +8,13 @@ import java.util.List;
  */
 public abstract class Tokenizer {
 
-    public abstract List<Word> split(List<Word> text);
+    public abstract List<Word> split0(List<Word> text);
 
     public List<String> split(String text) {
         List<Word> list = new ArrayList<>(1);
         list.add(new Word(text.replaceAll("[\\u0000-\\u0020]+", " ")));
-        return TokenFilter.filter(split(list));
+        List<Word> words = split0(list);
+        return TokenFilter.filterNothing(words);
     }
+
 }

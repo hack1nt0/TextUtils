@@ -45,10 +45,10 @@ public class KnnResult extends ClassificationResult {
 //    public String toString(int nrow) {
 //        StringWriter stringWriter = new StringWriter();
 //        PrintWriter out = new PrintWriter(stringWriter);
-//        if (n == 1) {
+//        if (size == 1) {
 //            KnnNeighbor[] sortedNns = nns[0].toArray(new KnnNeighbor[0]);
 //            Arrays.sort(sortedNns);
-//            out.printf("knn result single test of %d nearest neighbors \n", sortedNns.length);
+//            out.printf("knn result single test of %d nearest neighbors \size", sortedNns.length);
 //            int rows = Math.min(nrow, sortedNns.length);
 //            out.println(DataFrame.of(
 //                    StringFrame.of("test id", new StringList() {
@@ -103,7 +103,7 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //                    })));
 //        } else {
-//            out.printf("knn result multiple tests of %d documents \n", tests.rows());
+//            out.printf("knn result multiple tests of %d documents \size", tests.rows());
 //            int rows = Math.min(nrow, tests.rows());
 //            out.println(DataFrame.of(
 //                    StringFrame.of("test id", new StringList() {

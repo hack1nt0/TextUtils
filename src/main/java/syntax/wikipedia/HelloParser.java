@@ -1,15 +1,13 @@
-// Generated from /Users/dy/AC/src/main/java/wikipedia/Hello.g4 by ANTLR 4.7
+// Generated from /Users/dy/TextUtils/src/main/java/syntax/wikipedia/Hello.g4 by ANTLR 4.7
 package syntax.wikipedia;
-
-import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.atn.ATN;
-import org.antlr.v4.runtime.atn.ATNDeserializer;
-import org.antlr.v4.runtime.atn.ParserATNSimulator;
-import org.antlr.v4.runtime.atn.PredictionContextCache;
+import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
-import org.antlr.v4.runtime.tree.ParseTreeListener;
-import org.antlr.v4.runtime.tree.ParseTreeVisitor;
-import org.antlr.v4.runtime.tree.TerminalNode;
+import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.misc.*;
+import org.antlr.v4.runtime.tree.*;
+import java.util.List;
+import java.util.Iterator;
+import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class HelloParser extends Parser {
@@ -97,11 +95,6 @@ public class HelloParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof HelloListener ) ((HelloListener)listener).exitR(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof HelloVisitor ) return ((HelloVisitor<? extends T>)visitor).visitR(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final RContext r() throws RecognitionException {
@@ -140,11 +133,6 @@ public class HelloParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof HelloListener ) ((HelloListener)listener).exitId(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof HelloVisitor ) return ((HelloVisitor<? extends T>)visitor).visitId(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 

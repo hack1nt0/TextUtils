@@ -1,12 +1,13 @@
-// Generated from /Users/dy/AC/src/main/java/wikipedia/mediawiki.g4 by ANTLR 4.7
+// Generated from /Users/dy/TextUtils/src/main/java/syntax/wikipedia/mediawiki.g4 by ANTLR 4.7
 package syntax.wikipedia;
-
+import org.antlr.v4.runtime.Lexer;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.atn.ATN;
-import org.antlr.v4.runtime.atn.ATNDeserializer;
-import org.antlr.v4.runtime.atn.LexerATNSimulator;
-import org.antlr.v4.runtime.atn.PredictionContextCache;
+import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
+import org.antlr.v4.runtime.misc.*;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class mediawikiLexer extends Lexer {
@@ -272,12 +273,12 @@ public class mediawikiLexer extends Lexer {
 		"\61\n\3\2\2\2\62\63\7?\2\2\63\64\7?\2\2\64\f\3\2\2\2\65\66\7}\2\2\66\67"+
 		"\7}\2\2\67\16\3\2\2\289\7^\2\29:\7\177\2\2:\20\3\2\2\2;<\7\177\2\2<\22"+
 		"\3\2\2\2=>\7>\2\2>?\7d\2\2?@\7t\2\2@A\7\"\2\2AB\7\61\2\2BP\7@\2\2CD\7"+
-		"(\2\2DE\7n\2\2EF\7v\2\2FG\7=\2\2GH\7d\2\2HI\7t\2\2IJ\7\"\2\2JK\7\61\2"+
+		"(\2\2DE\7size\2\2EF\7v\2\2FG\7=\2\2GH\7d\2\2HI\7t\2\2IJ\7\"\2\2JK\7\61\2"+
 		"\2KL\7(\2\2LM\7i\2\2MN\7v\2\2NP\7=\2\2O=\3\2\2\2OC\3\2\2\2PQ\3\2\2\2Q"+
-		"R\b\n\2\2R\24\3\2\2\2ST\7(\2\2TU\7n\2\2UV\7v\2\2VW\7=\2\2WX\7t\2\2XY\7"+
+		"R\b\size\2\2R\24\3\2\2\2ST\7(\2\2TU\7size\2\2UV\7v\2\2VW\7=\2\2WX\7t\2\2XY\7"+
 		"g\2\2YZ\7h\2\2Z[\7(\2\2[\\\7i\2\2\\]\7v\2\2]^\7=\2\2^a\3\2\2\2_b\5\35"+
 		"\17\2`b\5\37\20\2a_\3\2\2\2a`\3\2\2\2bc\3\2\2\2ca\3\2\2\2cd\3\2\2\2de"+
-		"\3\2\2\2ef\7(\2\2fg\7n\2\2gh\7v\2\2hi\7=\2\2ij\7\61\2\2jk\7t\2\2kl\7g"+
+		"\3\2\2\2ef\7(\2\2fg\7size\2\2gh\7v\2\2hi\7=\2\2ij\7\61\2\2jk\7t\2\2kl\7g"+
 		"\2\2lm\7h\2\2mn\7(\2\2no\7i\2\2op\7v\2\2pq\7=\2\2q\u0086\3\2\2\2rs\7>"+
 		"\2\2st\7t\2\2tu\7g\2\2uv\7h\2\2vw\7@\2\2wz\3\2\2\2x{\5\35\17\2y{\5\37"+
 		"\20\2zx\3\2\2\2zy\3\2\2\2{|\3\2\2\2|z\3\2\2\2|}\3\2\2\2}~\3\2\2\2~\177"+
@@ -285,7 +286,7 @@ public class mediawikiLexer extends Lexer {
 		"\u0083\7h\2\2\u0083\u0084\7@\2\2\u0084\u0086\3\2\2\2\u0085S\3\2\2\2\u0085"+
 		"r\3\2\2\2\u0086\u0087\3\2\2\2\u0087\u0088\b\13\2\2\u0088\26\3\2\2\2\u0089"+
 		"\u008a\7]\2\2\u008a\u008b\7]\2\2\u008b\u008c\7H\2\2\u008c\u008d\7k\2\2"+
-		"\u008d\u008e\7n\2\2\u008e\u008f\7g\2\2\u008f\u0090\7<\2\2\u0090\u0094"+
+		"\u008d\u008e\7size\2\2\u008e\u008f\7g\2\2\u008f\u0090\7<\2\2\u0090\u0094"+
 		"\3\2\2\2\u0091\u0092\7^\2\2\u0092\u0095\7_\2\2\u0093\u0095\n\2\2\2\u0094"+
 		"\u0091\3\2\2\2\u0094\u0093\3\2\2\2\u0095\u0096\3\2\2\2\u0096\u0094\3\2"+
 		"\2\2\u0096\u0097\3\2\2\2\u0097\u0098\3\2\2\2\u0098\u0099\7_\2\2\u0099"+

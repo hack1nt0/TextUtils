@@ -50,7 +50,7 @@ public class MinibatchKmeans extends Clusterer {
             Stopwatch.tic();
             int[] batch = RandomUtils.chooseKElems(n, b);
             //int[] batch = new int[b];
-            //for (int i = 0; i < b; ++i) batch[i] = RandomUtils.uniform(n);
+            //for (int i = 0; i < b; ++i) batch[i] = RandomUtils.uniform(size);
 
             for (int di : batch) {
                 distToCentroid[di] = Double.MAX_VALUE;
@@ -68,10 +68,10 @@ public class MinibatchKmeans extends Clusterer {
             Stopwatch.tic();
 //            for (int di : batch) {
 //                Document d = dtm.get(di);
-//                int ki = clazz[di];
+//                int ki = which[di];
 //                capacity[ki]++;
 //                double eta = 1 / capacity[ki];
-//                //for (int i = 0; i < d.n; ++i) centroid[ki][d.index[i]] = (1 - eta) * centroid[ki][d.index[i]] + eta * d.data[i]; // for 0 to d.n OR for 0 to m
+//                //for (int i = 0; i < d.size; ++i) centroid[ki][d.index[i]] = (1 - eta) * centroid[ki][d.index[i]] + eta * d.data[i]; // for 0 to d.size OR for 0 to m
 //                average(d, centroid[ki], eta);
 //            }
             for (int ki = 0; ki < k; ++ki) {
@@ -81,7 +81,7 @@ public class MinibatchKmeans extends Clusterer {
                     if (clazz[di] != ki) continue;
                     capacityKi++;
                     Document d = dtm.get(di);
-                    for (int i = 0; i < d.n; ++i) acc[d.index[i]] += d.data[i];
+                    for (int i = 0; i < d.size; ++i) acc[d.index[i]] += d.data[i];
                 }
                 if (capacityKi > 0) {
                     for (int mi = 0; mi < m; ++mi) centroid[ki][mi] = centroid[ki][mi] * (1 - lr) + acc[mi] * lr / capacityKi;
@@ -102,7 +102,7 @@ public class MinibatchKmeans extends Clusterer {
     private void average(Document d, double[] centroid, double eta) {
         int i = 0, j = 0;
         while (i < centroid.length) {
-            if (j < d.n && i == d.index[j]) {
+            if (j < d.size && i == d.index[j]) {
                 centroid[i] = (1 - eta) * centroid[i] + eta * d.data[j];
                 i++;
                 j++;

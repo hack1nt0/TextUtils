@@ -5,7 +5,6 @@ import template.debug.Stopwatch;
 import template.numbers.DoubleUtils;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.IntStream;
 
 /**
@@ -42,7 +41,7 @@ public class GaussianMixtures extends Clusterer {
         double oldLikelihood = 0;
         for (int itr = 0; itr < maxItr; ++itr) {
             //Expectation
-            //for (int di = 0; di < n; ++di) {
+            //for (int di = 0; di < size; ++di) {
             Stopwatch.tic();
             IntStream.range(0, n)
                     .parallel()
@@ -96,7 +95,7 @@ public class GaussianMixtures extends Clusterer {
                         for (int di = 0; di < n; ++di) {
                             count += resp[di][ci];
                             Document d = dtm.get(di);
-                            for (int i = 0; i < d.n; ++i) {
+                            for (int i = 0; i < d.size; ++i) {
                                 mean[d.index[i]] += resp[di][ci] * d.data[i];
                             }
                         }
@@ -110,7 +109,7 @@ public class GaussianMixtures extends Clusterer {
                             int[] index = d.index;
                             double[] data = d.data;
                             for (int mi = 0; mi < m; ++mi) variance[mi] += resp[di][ci] * mean[mi] * mean[mi];
-                            for (int i = 0; i < d.n; ++i) variance[index[i]] += resp[di][ci] * data[i] * (data[i] - 2 * mean[index[i]]);
+                            for (int i = 0; i < d.size; ++i) variance[index[i]] += resp[di][ci] * data[i] * (data[i] - 2 * mean[index[i]]);
                         }
                         for (int mi = 0; mi < m; ++mi) {
                             variance[mi] = variance[mi] / clzWeight[ci] + varianceSmoothing;

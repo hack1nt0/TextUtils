@@ -1,6 +1,6 @@
 package mlearn.tokenizer;
 
-import template.debug.InputReaderUnicode;
+import template.debug.ScannerUTF8;
 
 import java.io.*;
 import java.util.*;
@@ -14,12 +14,13 @@ public class LmHmmTokenizer extends Tokenizer {
     private HmmTokenizer hmm;
 
     public LmHmmTokenizer() {
-        dictionary = new SortedArrayDictionary(InputReaderUnicode.fromResource("/tokenizer/jieba.sorted.dict"));
-//        dictionary = new TrieDictionary(InputReaderUnicode.fromResource("/dictionary/jieba.sorted.dict"));
-        hmm =  new HmmTokenizer(InputReaderUnicode.fromResource("/tokenizer/hmm.model"));
+        dictionary = new SortedArrayDictionary(ScannerUTF8.fromResource("/tokenizer/jieba.sorted.dict"));
+//        dictionary = new TrieDictionary(ScannerUTF8.fromResource("/dictionary/jieba.sorted.dict"));
+        hmm =  new HmmTokenizer(ScannerUTF8.fromResource("/tokenizer/hmm.model"));
     }
 
-    public List<Word> split(List<Word> text) {
+    @Override
+    public List<Word> split0(List<Word> text) {
         List<Word> words = new ArrayList<>();
         for (Word segment : text) {
             if (segment.source != null) {

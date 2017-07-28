@@ -1,6 +1,5 @@
 package mlearn;
 
-import mlearn.dataframe.*;
 import template.collection.CollectionUtils;
 import template.collection.Sorter;
 import template.numbers.DoubleUtils;
@@ -21,16 +20,14 @@ public class Document{
     boolean normalized;
     public double norm2;
     public ConcurrentIndexer termIndexer;
-    public int n;
+    public int size;
 
     Document(int[] index, double[] data, ConcurrentIndexer termIndexer) {
         assert Sorter.sorted(index);
         this.index = index;
         this.data = data;
-        for (double d : data) norm2 += d * d;
-        norm2 = Math.sqrt(norm2);
         this.termIndexer = termIndexer;
-        this.n = index.length;
+        this.size = index.length;
     }
 
     Document(Collection<Integer> index, Collection<Double> data, ConcurrentIndexer termIndexer) {
@@ -45,7 +42,7 @@ public class Document{
     public double squaredDistance(Document that) {
         if (termIndexer != that.termIndexer) throw new IllegalArgumentException();
         double dist = 0.0;
-        for (int i = 0, j = 0; i < n && j < that.n; ) {
+        for (int i = 0, j = 0; i < size && j < that.size; ) {
             int cmp = index[i] - that.index[j];
             if (cmp == 0) {
                 dist += (data[i] - that.data[j]) * (data[i] - that.data[j]);
@@ -78,7 +75,7 @@ public class Document{
     public double dot(Document that) {
         if (termIndexer != that.termIndexer) throw new IllegalArgumentException();
         double dot = 0.0;
-        for (int i = 0, j = 0; i < n && j < that.n; ) {
+        for (int i = 0, j = 0; i < size && j < that.size; ) {
             int cmp = index[i] - that.index[j];
             if (cmp == 0) {
                 dot += data[i] * that.data[j];
@@ -93,13 +90,15 @@ public class Document{
     public double dot(double[] that) {
         if (termIndexer.size() != that.length) throw new IllegalArgumentException();
         double dot = 0.0;
-        for (int i = 0; i < n; ++i) dot += data[i] * that[index[i]];
+        for (int i = 0; i < size; ++i) dot += data[i] * that[index[i]];
         return dot;
     }
 
     public void normalize() {
         if (normalized) return;
         normalized = true;
+        for (double d : data) norm2 += d * d;
+        norm2 = Math.sqrt(norm2);
         for (int i = 0; i < data.length; ++i) data[i] /= norm2;
     }
 
@@ -113,9 +112,9 @@ public class Document{
     public String toString() {
         StringWriter stringWriter = new StringWriter();
         PrintWriter out = new PrintWriter(stringWriter);
-        int rows = Math.min(10, n);
+        int rows = Math.min(10, size);
         List<Pair<String, Double>> tws = getTopWords(rows);
-        out.printf("single document of word count %d, top words: \n", n);
+        out.printf("single document of word count %d, top words: \n", size);
         out.println(tws);
         out.close();
         return stringWriter.toString();
@@ -125,7 +124,7 @@ public class Document{
         if (termIndexer != that.termIndexer) throw new IllegalArgumentException();
         List<Integer> index = new ArrayList<>();
         List<Double> data = new ArrayList<>();
-        for (int i = 0, j = 0; i < n && j < that.n; ) {
+        for (int i = 0, j = 0; i < size && j < that.size; ) {
             int cmp = this.index[i] - that.index[j];
             if (cmp == 0) {
                 index.add(this.index[i]);
@@ -143,7 +142,7 @@ public class Document{
         if (termIndexer != that.termIndexer) throw new IllegalArgumentException();
         List<Integer> index = new ArrayList<>();
         List<Double> data = new ArrayList<>();
-        for (int i = 0, j = 0; i < n && j < that.n; ) {
+        for (int i = 0, j = 0; i < size && j < that.size; ) {
             int cmp = this.index[i] - that.index[j];
             if (cmp == 0) {
                 index.add(this.index[i]);
@@ -164,8 +163,6 @@ public class Document{
         }
         return new Document(index, data, this.termIndexer);
     }
-
-    public int getWordCount() { return n; }
 
     public List<Pair<String, Double>> getTopWords(int k) {
         return getTopWords().subList(0, k);

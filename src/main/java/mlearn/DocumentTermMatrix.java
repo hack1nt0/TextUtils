@@ -1,19 +1,17 @@
 package mlearn;
 
-import mlearn.tokenizer.LmHmmTokenizer;
+import mlearn.tokenizer.StackedTokenizer;
+import mlearn.tokenizer.Tokenizer;
 import template.collection.CollectionUtils;
-import template.collection.sequence.ArrayUtils;
 import mlearn.dataframe.DataFrame;
 import template.concurrency.TaskScheduler;
+import template.debug.ScannerUTF8;
+import template.debug.PrintWriterUTF8;
 import template.debug.Stopwatch;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicIntegerArray;
-import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
 
 /**
@@ -23,21 +21,17 @@ import java.util.stream.IntStream;
  */
 public class DocumentTermMatrix implements Iterable<Document>{
     private Document[] matrix;
-    public ConcurrentIndexer termIndexer;
-    private String[] clazz; // for classification
-    private int[] cluster; // for clustering
-    private int nrow, ncol, n;
-    public double[] idf;
-    private double constructionTime;
-    private int[] index; // for slicing(filtering)
+    public ConcurrentIndexer termIndexer = new ConcurrentIndexer();
+    private int rows, cols, size;
+    private double[] idf;
+    private double constructionTime, sparsity;
 
     protected DocumentTermMatrix() {}
 
     public DocumentTermMatrix(List<List<String>> txts) {
         long begin = System.currentTimeMillis();
-        this.nrow = txts.size();
-        this.matrix = new Document[nrow];
-        this.termIndexer = new ConcurrentIndexer();
+        this.rows = txts.size();
+        this.matrix = new Document[rows];
         /* tf */
         IntStream.range(0, txts.size())
                 .parallel()
@@ -61,25 +55,25 @@ public class DocumentTermMatrix implements Iterable<Document>{
                         });
         IntStream.range(0, terms)
                 .parallel()
-                .forEach(i -> { idf[i] = Math.log((double)nrow / df.get(i));});
+                .forEach(i -> { idf[i] = Math.log((double) rows / df.get(i));});
 
         /* tf-idf */
         IntStream.range(0, txts.size())
                 .parallel()
                 .forEach(r -> {
                     Document doc = matrix[r];
-                    for (int i = 0; i < doc.n; ++i) doc.data[i] *= idf[doc.index[i]];
+                    for (int i = 0; i < doc.size; ++i) doc.data[i] *= idf[doc.index[i]];
                 });
-        this.ncol = termIndexer.size();
-        this.index = ArrayUtils.index(txts.size());
-        for (Document doc : matrix) this.n += doc.n;
+        this.cols = termIndexer.size();
+        for (Document doc : matrix) this.size += doc.size;
         constructionTime = (System.currentTimeMillis() - begin) / 1000.;
+        sparsity = (double)this.size / (this.rows * this.cols);
     }
 
     public DocumentTermMatrix(List<List<String>> txts, DocumentTermMatrix trains) {
         long begin = System.currentTimeMillis();
-        this.nrow = txts.size();
-        this.matrix = new Document[nrow];
+        this.rows = txts.size();
+        this.matrix = new Document[rows];
         this.termIndexer = trains.termIndexer;
         this.idf = trains.idf;
         IntStream.range(0, txts.size())
@@ -96,53 +90,24 @@ public class DocumentTermMatrix implements Iterable<Document>{
                     for (int i = 0; i < tfidf.length; ++i) tfidf[i] *= idf[index[i]];
                     matrix[r] = new Document(index, tfidf, termIndexer);
                 });
-        this.ncol = termIndexer.size();
-        this.index = ArrayUtils.index(txts.size());
+        this.cols = termIndexer.size();
         constructionTime = (System.currentTimeMillis() - begin) / 1000.;
     }
 
     public int size() {
-        return rows();
+        return rows;
     }
 
     public int rows() {
-        return getIndex().length;
+        return rows;
     }
 
     public int cols() {
         return termIndexer.size();
     }
 
-    public int[] getIndex() {
-        return index;
-    }
-
-    public Document get(int docId) {
-        return matrix[getIndex()[docId]];
-    }
-
-    public int[] getCluster() {
-        return cluster;
-    }
-
-    public int getCluster(int i) {
-        return cluster[getIndex()[i]];
-    }
-
-    public void setCluster(int i, int clusterId) {
-        cluster[getIndex()[i]] = clusterId;
-    }
-
-    public String getClazz(int i) {
-        return clazz[getIndex()[i]];
-    }
-
-    public String[] getClazz() {
-        return clazz;
-    }
-
-    public void setClazz(int i, String clazz) {
-        this.clazz[getIndex()[i]] = clazz;
+    public Document get(int index) {
+        return matrix[index];
     }
 
     @Override
@@ -150,9 +115,9 @@ public class DocumentTermMatrix implements Iterable<Document>{
         StringWriter stringWriter = new StringWriter();
         PrintWriter out = new PrintWriter(stringWriter);
         double density = 0;
-        for (Document d : this) density += d.n;
+        for (Document d : this) density += d.size;
         density = density * 100. / this.rows() / this.cols();
-        out.printf("Document-Term Matrix(dtm) %d documents x %d words, density %.3f%%, time cost %.3fs \n", this.nrow, this.ncol, density, constructionTime);
+        out.printf("Document-Term Matrix(dtm) %d documents x %d words, density %.3f%%, time cost %.3fs \n", this.rows, this.cols, density, constructionTime);
         int rows = Math.min(this.rows(), 10);
         for (int i = 0; i < rows; ++i) {
             out.println(matrix[i]);
@@ -162,39 +127,77 @@ public class DocumentTermMatrix implements Iterable<Document>{
         return stringWriter.toString();
     }
 
-    public void writeToFile(PrintWriter out) {
-        out.printf("%d %d %d %f %f\n", this.nrow, this.ncol, this.n, (double)this.n / (this.nrow * this.ncol), this.constructionTime);
+    public void write(PrintWriterUTF8 out) {
+        out.println(this.rows);
+        out.println(this.cols);
+        out.println(this.size);
+        out.println(this.sparsity);
+        out.println(this.constructionTime);
 
-        for (String t : termIndexer.mapToTerm) out.println(t);
+        for (int i = 0; i < this.cols; ++i) {
+            out.println(termIndexer.getTerm(i));
+        }
+        for (int i = 0; i < this.cols; ++i) {
+            out.print(idf[i]);
+            out.print(" ");
+        }
+        out.println();
+
+        int offset = 0;
+        for (Document doc : matrix) {
+            offset += doc.size;
+            out.print(offset);
+            out.print(" ");
+        }
+        out.println();
 
         for (Document doc : matrix) {
             for (int i : doc.index) {
-                out.printf("%d ", i);
+                out.print(i);
+                out.print(" ");
             }
         }
         out.println();
         for (Document doc : matrix) {
             for (double i : doc.data) {
-                out.printf("%f ", i);
+                out.print(i);
+                out.print(" ");
             }
         }
         out.println();
-        int offset = 0;
-        for (Document doc : matrix) {
-            out.printf("%d ", offset);
-            offset += doc.n;
+    }
+
+    public static DocumentTermMatrix read(ScannerUTF8 in) {
+        DocumentTermMatrix dtm = new DocumentTermMatrix();
+        dtm.rows = in.nextInt();
+        dtm.cols = in.nextInt();
+        dtm.size = in.nextInt();
+        dtm.sparsity = in.nextDouble();
+        dtm.constructionTime = in.nextDouble();
+        for (int i = 0; i < dtm.cols; ++i) {
+            dtm.termIndexer.put(in.nextLine());//// TODO: 17-7-25  put method not works.
         }
-
-
-//        Collections.sort(termIndexer.mapToTerm);
-//        for (int i = 0; i < Math.min(1000, termIndexer.mapToTerm.size()); ++i) {
-//            out.print(i + "\t\"");
-//            String t = termIndexer.mapToTerm.get(i);
-//            int[] cs = new int[t.length()];
-//            for (int j = 0; j < t.length(); ++j) cs[j] = t.charAt(j);
-//            String[] bytes = Arrays.stream(cs).mapToObj(Integer::toHexString).toArray(String[]::new);
-//            out.println(t + "\"\t" + termIndexer.mapToTerm.get(i).length() + "\t" + Arrays.toString(bytes));
-//        }
+        dtm.idf = new double[dtm.cols];
+        for (int i = 0; i < dtm.cols; ++i) dtm.idf[i] = in.nextDouble();
+        dtm.matrix = new Document[dtm.rows];
+        int from = 0;
+        for (int i = 0; i < dtm.rows; ++i) {
+            int to = in.nextInt();
+            int[] index = new int[to - from];
+            double[] data = new double[to - from];
+            Document document = new Document(index, data, dtm.termIndexer);
+            dtm.matrix[i] = document;
+            from = to;
+        }
+        for (int i = 0; i < dtm.rows; ++i) {
+            int[] index = dtm.get(i).index;
+            for (int j = 0; j < index.length; ++j) index[j] = in.nextInt();
+        }
+        for (int i = 0; i < dtm.rows; ++i) {
+            double[] data = dtm.get(i).data;
+            for (int j = 0; j < data.length; ++j) data[j] = in.nextDouble();
+        }
+        return dtm;
     }
 
 
@@ -202,50 +205,23 @@ public class DocumentTermMatrix implements Iterable<Document>{
     public Iterator<Document> iterator() {
         return new Iterator<Document>() {
             int i = 0;
-            int[] index = getIndex();
             @Override
             public boolean hasNext() {
-                return i < index.length;
+                return i < rows;
             }
 
             @Override
             public Document next() {
-                return matrix[index[i++]];
+                return matrix[i++];
             }
         };
     }
 
-    public SubDocumentTermMatrix filter(IntPredicate predicate) {
-        List<Integer> validIndex = new ArrayList<>();
-        int[] oldIndex = getIndex();
-        for (int i : oldIndex) if (predicate.test(i)) validIndex.add(i);
-        return new SubDocumentTermMatrix(this, CollectionUtils.toIntArray(validIndex));
-    }
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         DataFrame df = new DataFrame(new BufferedInputStream(System.in));
-        List<String> rawTexts = df.get(1);
-        List<String>[] tokens = new List[df.rows()];
-        int cores = Runtime.getRuntime().availableProcessors() / 2;
-        Runnable[] tasks = new Runnable[cores];
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.start();
-        for (int i = 0; i < cores; ++i) {
-            final int from = i * rawTexts.size() / cores;
-            final int to = (i + 1) * rawTexts.size() / cores;
-            tasks[i] = () -> {
-                LmHmmTokenizer tokenizer = new LmHmmTokenizer();
-                for (int r = from; r < to; ++r) {
-                    String text = rawTexts.get(r);
-                    tokens[r] = tokenizer.split(text);
-                }
-            };
-        }
-        TaskScheduler.parallel(tasks);
-        stopwatch.stop();
-        DocumentTermMatrix dtm = new DocumentTermMatrix(Arrays.asList(tokens));
-        PrintWriter out = new PrintWriter(new BufferedOutputStream(System.out));
-        dtm.writeToFile(out);
+        DocumentTermMatrix dtm = new DocumentTermMatrix(StackedTokenizer.split(df.get(1)));
+        PrintWriterUTF8 out = new PrintWriterUTF8(System.out);
+        dtm.write(out);
         out.close();
     }
 }

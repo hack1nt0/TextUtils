@@ -5,8 +5,8 @@ package mlearn;
  */
 public class testND4j {
     public static void main(String[] args) {
-//        int n = 1000, m = 1000, k = 1000;
-//        double[][] A = new double[n][m];
+//        int size = 1000, m = 1000, k = 1000;
+//        double[][] A = new double[size][m];
 //        double[][] B = new double[m][k];
 //        Stopwatch.tic();
 //        INDArray C = Nd4j.create(A).mul(Nd4j.create(B));

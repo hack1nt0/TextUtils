@@ -1,40 +1,45 @@
 package mlearn.bayesian;
 
+import com.sun.javafx.binding.StringFormatter;
 import mlearn.*;
 import mlearn.dataframe.DataFrame;
+import mlearn.tokenizer.StackedTokenizer;
 import template.collection.Sorter;
 import template.collection.sequence.ArrayUtils;
+import template.debug.PrintWriterUTF8;
 import template.debug.RandomUtils;
+import template.debug.ScannerUTF8;
 import template.numbers.DoubleUtils;
 
-import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * @author dy[jealousing@gmail.com] on 17-5-20.
  */
-public class LatentDirichletAllocation implements Serializable {
+public class LatentDirichletAllocation extends Model{
     public int[][] documentTopicCount;
     public int[][] topicWordCount;
     public int[] topicCapacity;
     public int[][] documentWordAllocation;
-    public double alpha = 0.5, beta = 0.1;
-    public int k, maxItr = 20;
+    public final double alpha = 0.5, beta = 0.1;
+    public int k;
     public String[] names;
     public int n, m;
-
     public BowDocumentTermMatrix dtm;
     private double[] allocationProb;
 
-    private LatentDirichletAllocation() {}
+    @Override
+    public Object fit(Object...params) {
+        this.dtm = (BowDocumentTermMatrix)params[0];
+        this.k = (int)params[1];
+        int maxItr = (int)params[2];
+        System.err.printf("lda(k=%d, maxItr=%d, alpha=%f, beta=%f)...\n", k, maxItr, alpha, beta);
+        System.err.printf("Iteration   (Log).Joint.Prob         cost(s)\n");
 
-    public void fit(BowDocumentTermMatrix dtm, int k) {
-        long fitBegin = System.currentTimeMillis();
-        this.dtm = dtm;
-        this.k = k;
         this.names = new String[k];
-        for (int i = 0; i < k; ++i) names[i] = "topic " + (i + 1);
+        for (int i = 0; i < k; ++i) names[i] = "Topic." + (i + 1);
         n = dtm.nrow;
         m = dtm.termIndexer.size();
         documentTopicCount = new int[n][k];
@@ -44,8 +49,8 @@ public class LatentDirichletAllocation implements Serializable {
         allocationProb = new double[k];
         for (int di = 0; di < n; ++di) {
             BagOfWords d = dtm.get(di);
-            documentWordAllocation[di] = new int[d.n];
-            for (int i = 0; i < d.n; ++i) {
+            documentWordAllocation[di] = new int[d.size];
+            for (int i = 0; i < d.size; ++i) {
                 int wi = d.index[i];
                 int ki = RandomUtils.uniform(k);
                 topicWordCount[ki][wi]++;
@@ -58,7 +63,7 @@ public class LatentDirichletAllocation implements Serializable {
             long begin = System.currentTimeMillis();
             for (int di = 0; di < n; ++di) {
                 BagOfWords d = dtm.get(di);
-                for (int i = 0; i < d.n; ++i) {
+                for (int i = 0; i < d.size; ++i) {
                     int wi = d.index[i];
                     int oldKi = documentWordAllocation[di][i];
                     documentTopicCount[di][oldKi]--;
@@ -75,16 +80,10 @@ public class LatentDirichletAllocation implements Serializable {
                 }
             }
             if (itr % 10 == 0) {
-                System.out.printf("iteration %5d, time cost %10.3fs, ", itr, (System.currentTimeMillis() - begin) / 1000.);
-                System.out.printf("(log) joint probability %20.3f \n", jointProb());
+                System.err.printf("%5d\t%20.3f\t%10.3f\n", itr, jointProb(), (System.currentTimeMillis() - begin) / 1000.);
             }
         }
-
-        System.out.printf("lda fitting, maxItr = %d, time cost %.3fs \n", maxItr, (System.currentTimeMillis() - fitBegin) / 1000.);
-    }
-
-    public double[][] classify(IntDocumentTermMatrix tests) {
-        throw new IllegalArgumentException();
+        return null;
     }
 
     public double[][] getDocumentTopicDistribution() {
@@ -126,7 +125,7 @@ public class LatentDirichletAllocation implements Serializable {
         double logJointProb = 0;
         for (int di = 0; di < dtm.nrow; ++di) {
             BagOfWords d = dtm.get(di);
-            for (int i = 0; i < d.n; ++i) {
+            for (int i = 0; i < d.size; ++i) {
                 int wi = d.index[i];
                 int wki = documentWordAllocation[di][i];
                 double p = documentTopicProb[di][wki] * topicWordProb[wki][wi];
@@ -136,91 +135,66 @@ public class LatentDirichletAllocation implements Serializable {
         return logJointProb;
     }
 
-    public List<Pair<String, Double>>[] getTopics(int wn) {
-        List<Pair<String, Double>>[] res = new ArrayList[k];
+    private class StringDoublePair {
+        String key;
+        double value;
+
+        public StringDoublePair(String key, double value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return StringFormatter.format("%-25s\t:%.4e", key, value).get();
+        }
+    }
+
+    public List<StringDoublePair>[] getTopics(int wn) {
+        List<StringDoublePair>[] res = new ArrayList[k];
         double[][] topicWordProb = getTopicWordDistribution();
         for (int ki = 0; ki < k; ++ki) {
             int topic = ki;
             int[] index = ArrayUtils.index(m);
             Sorter.sort(index, (i, j) -> -DoubleUtils.compare(topicWordProb[topic][i], topicWordProb[topic][j]));
-            List<Pair<String, Double>> words = new ArrayList<>();
-            for (int i = 0; i < wn; ++i) words.add(new Pair<>(dtm.termIndexer.getTerm(index[i]), topicWordProb[topic][index[i]]));
+            List<StringDoublePair> words = new ArrayList<>();
+            for (int i = 0; i < wn; ++i) words.add(new StringDoublePair(dtm.termIndexer.getTerm(index[i]), topicWordProb[topic][index[i]]));
             res[ki] = words;
         }
         return res;
     }
 
     public void printTopics(int wn) {
-//        List<Pair<String, Double>>[] topics = getTopics(wn);
-//        StringDoubleFrame[] frames = new StringDoubleFrame[k];
-//        for (int i = 0; i < k; ++i) frames[i] = StringDoubleFrame.of(names[i], topics[i]);
-//        System.out.println(DataFrame.of(frames));
-    }
-
-    public void asModel(String path) {
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(path))) {
-            asModel(out);
-            out.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException();
+        List<StringDoublePair>[] topics = getTopics(wn);
+        Arrays.sort(topics, (t1, t2) -> t1.get(0).key.compareTo(t2.get(0).key));
+        for (int i = 0; i < k; ++i) {
+            System.err.println(names[i]);
+            for (int j = 0; j < wn; ++j)
+                System.err.println(topics[i].get(j));
+            System.err.println("------------------------------------");
         }
     }
 
-    public void asModel(ObjectOutputStream out) throws IOException {
-//        out.writeObject(documentTopicCount);
-//        out.writeObject(topicWordCount);
-//        out.writeObject(topicCapacity);
-//        out.writeObject(documentWordAllocation);
-//        out.writeDouble(alpha);
-//        out.writeDouble(beta);
-//        out.writeInt(k);
-//        out.writeInt(maxItr);
-//        out.writeInt(n);
-//        out.writeInt(m);
-//        out.writeObject(names);
-        out.writeObject(this);
+    @Override
+    public Object apply(Object... params) {
+        throw new UnsupportedOperationException();
     }
 
-    public static LatentDirichletAllocation ofModel(String path) {
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(path))) {
-            LatentDirichletAllocation lda = ofModel(in);
-            in.close();
-            return lda;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException();
-        }
+    @Override
+    public Model read(ScannerUTF8 in) {
+        return null;
     }
 
-    public static LatentDirichletAllocation ofModel(ObjectInputStream in) throws Exception {
-//        LatentDirichletAllocation lda = new LatentDirichletAllocation();
-//        lda.documentTopicCount = (int[][]) in.readObject();
-//        lda.topicWordCount = (int[][]) in.readObject();
-//        lda.topicCapacity = (int[]) in.readObject();
-//        lda.documentWordAllocation = (int[][]) in.readObject();
-//        lda.alpha = in.readDouble();
-//        lda.beta = in.readDouble();
-//        lda.k = in.readInt();
-//        lda.maxItr = in.readInt();
-//        lda.n = in.readInt();
-//        lda.m = in.readInt();
-//        lda.names = (String[]) in.readObject();
-        LatentDirichletAllocation lda = (LatentDirichletAllocation)in.readObject();
-        return lda;
+    @Override
+    public void write(PrintWriterUTF8 in) {
+
     }
-
-
 
     public static void main(String[] args) {
-        List<String>[] csv = FileUtils.readCsv("/Users/dy/Downloads/people_wiki.csv", true);
-        BowDocumentTermMatrix trains = BowDocumentTermMatrix.asTrain(csv[2], csv[1]);
-        System.out.println(trains);
+        DataFrame dataFrame = new DataFrame(System.in);
+        BowDocumentTermMatrix bowDtm = new BowDocumentTermMatrix(StackedTokenizer.split(dataFrame.get(1)));
         LatentDirichletAllocation lda = new LatentDirichletAllocation();
-        lda.fit(trains, 10);
-        lda.printTopics(10);
-        lda.asModel("output/tmp.txt");
-        LatentDirichletAllocation lda2 = LatentDirichletAllocation.ofModel("output/tmp.txt");
-        lda2.printTopics(10);
+        lda.fit(bowDtm, Integer.valueOf(args[0]), Integer.valueOf(args[1]));
+        lda.printTopics(Integer.valueOf(args[2]));
     }
 }

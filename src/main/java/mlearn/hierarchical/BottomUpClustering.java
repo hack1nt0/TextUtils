@@ -3,7 +3,6 @@ package mlearn.hierarchical;
 import mlearn.ClusterResult;
 import mlearn.Clusterer;
 import mlearn.DocumentTermMatrix;
-import mlearn.FileUtils;
 import mlearn.r.R;
 import template.collection.sets.UnionFind;
 import template.debug.Stopwatch;
@@ -40,7 +39,7 @@ public class BottomUpClustering extends Clusterer {
 
     public ClusterResult cluster(DocumentTermMatrix dtm) {
         this.n = dtm.rows();
-        labels = dtm.getClazz();
+//        labels = dtm.getClazz();
         child = new int[n - 1][2];
         height = new double[n - 1];
         IntStream.range(0, n).parallel().forEach(di -> dtm.get(di).normalize());

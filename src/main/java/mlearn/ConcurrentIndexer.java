@@ -1,7 +1,9 @@
 package mlearn;
 
+import java.io.Reader;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -10,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConcurrentIndexer implements Serializable{
     Object writeLock = new Object();
     ConcurrentHashMap<String, Integer> mapToId = new ConcurrentHashMap<>();
-    ArrayList<String> mapToTerm = new ArrayList<>();
+    public ArrayList<String> mapToTerm = new ArrayList<>();
     //ConcurrentSkipListMap<String, Integer> mapToId = new ConcurrentSkipListMap<>(); //RACE CONDITION? NO stopping
 
     public int getOrAdd(String term) {
@@ -26,7 +28,13 @@ public class ConcurrentIndexer implements Serializable{
         return mapToId.get(term);
     }
 
-    public int size() { return mapToId.size(); }
+    public void put(String term) {
+//        if (mapToId.containsKey(term)) throw new RuntimeException("duplicated " + term);
+        mapToId.put(term, mapToId.size());
+        mapToTerm.add(term);
+    }
+
+    public int size() { return mapToTerm.size(); }
 
     public boolean containsTerm(String term) {
         return mapToId.containsKey(term);
@@ -40,7 +48,7 @@ public class ConcurrentIndexer implements Serializable{
 
     public String getTerm(int id) {
         String w = mapToTerm.get(id);
-        if (mapToId.get(w) != id) throw new RuntimeException();
+//        if (mapToId.get(w) != id) throw new RuntimeException(id + " != " + mapToId.get(w));
         return w;
     }
 

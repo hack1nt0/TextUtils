@@ -1,11 +1,5 @@
 package mlearn.tokenizer;
 
-import template.debug.InputReaderUnicode;
-import template.debug.MemoryMeasurer;
-
-import java.io.*;
-import java.util.*;
-
 /**
  * Created by root on 14-9-5.
  */

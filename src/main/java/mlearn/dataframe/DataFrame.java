@@ -15,7 +15,7 @@ import java.util.List;
  * @author dy[jealousing@gmail.com] on 17-5-11.
  */
 public class DataFrame {
-    List<List<String>> frames;
+    List<List> frames;
     List<String> colNames;
 
     public DataFrame(InputStream in) {
@@ -37,7 +37,7 @@ public class DataFrame {
     }
 
 
-    DataFrame(List... frames) {
+    public DataFrame(List... frames) {
         this.frames = Arrays.asList(frames);
     }
 
@@ -45,7 +45,7 @@ public class DataFrame {
         this.colNames = Arrays.asList(colNames);
     }
 
-    public void add(String name, List frame) {
+    public void add(String name, List<String> frame) {
         colNames.add(name);
         frames.add(frame);
     }
@@ -56,7 +56,7 @@ public class DataFrame {
         return frames.get(index);
     }
 
-    public List get(int i) {
+    public List<String> get(int i) {
         return frames.get(i);
     }
 
@@ -84,7 +84,7 @@ public class DataFrame {
 
         for (int i = 0; i < rows(); ++i) {
             for (int j = 0; j < cols(); ++j) {
-                String field = frames.get(j).get(i);
+                String field = frames.get(j).get(i).toString();
                 field = field.replaceAll("\"", "\"\"");
                 out.printf("%s%s%s", '"', field, '"');
                 out.print(j == cols() - 1 ? '\n' : ',');
@@ -95,7 +95,7 @@ public class DataFrame {
 
     static class CsvExtractor extends CSVBaseListener {
         private boolean visitedHdr = false;
-        public List<List<String>> frames = new ArrayList<>();
+        public List<List> frames = new ArrayList<>();
         public List<String> colNames = new ArrayList<>();
 
         @Override
@@ -118,7 +118,7 @@ public class DataFrame {
                         colName = colName.replaceAll("\"\"", "\"");
                     }
                     colNames.add(colName);
-                    frames.add(new ArrayList<>());
+                    frames.add(new ArrayList<String>());
                 }
             } else {
                 for (int i = 0; i < ctx.getChildCount(); i += 2) {
@@ -132,6 +132,37 @@ public class DataFrame {
             }
         }
     }
+
+    @Override
+    public String toString() {
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter out = new PrintWriter(stringWriter);
+        StringBuffer format = new StringBuffer();
+        for (int i = 0; i < cols(); ++i) {
+            int w = Math.max(colNames.get(i).length(), width(frames.get(i)) + 5);
+            boolean isNumber = frames.get(i).get(0) instanceof Double ||
+                    frames.get(i).get(0) instanceof Float ||
+                    frames.get(i).get(0) instanceof Integer ||
+                    frames.get(i).get(0) instanceof Long;
+            format.append("%" + (isNumber ? "" : "-") + w + "s\t");
+        }
+        format.append("\n");
+        System.err.println(format);
+        out.printf(format.toString(), colNames.toArray(new String[0]));
+        for (int i = 0; i < rows(); ++i) {
+            String[] row = new String[cols()];
+            for (int j = 0; j < cols(); ++j) row[j] = frames.get(j).get(i).toString();
+            out.printf(format.toString(), row);
+        }
+        return stringWriter.toString();
+    }
+
+    private int width(List list) {
+        int maxWidth = 0;
+        for (int i = 0; i < list.size(); ++i) maxWidth = Math.max(maxWidth, list.get(i).toString().length());
+        return maxWidth;
+    }
+
 
     public static void main(String[] args) throws Exception {
         DataFrame dataFrame = new DataFrame(new FileInputStream("/Users/dy/TextUtils/data/train/spamsms.csv"));

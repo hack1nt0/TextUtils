@@ -1,12 +1,11 @@
 package mlearn.kmeans;
 
 import mlearn.*;
+import template.debug.ScannerUTF8;
 import template.debug.RandomUtils;
-import template.debug.Stopwatch;
 import template.numbers.DoubleUtils;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.IntStream;
 
 /**
@@ -24,15 +23,15 @@ public class KmeansX extends Clusterer {
     }
 
     public KmeansResult cluster(DocumentTermMatrix dtm) {
-        return cluster(dtm, 100, -1, 10);
+        return cluster(dtm, 10, 10);
     }
 
-    public static KmeansResult cluster(DocumentTermMatrix dtm, int k, int rn, int maxIter) {
-        System.out.printf("K-meansX running k = %d, rn = %d, maxItr = %d\n", k, rn, maxIter);
+    public static KmeansResult cluster(DocumentTermMatrix dtm, int k, int maxIter) {
+        System.err.printf("KmeansX(k = %d, rn = %d, maxItr = %d)...\n", k, 1, maxIter);
         long beginKmeans = System.currentTimeMillis();
         int n = dtm.rows();
         int m = dtm.cols();
-        //for clazz
+        //for which
         double[][] centroid = new double[k][m];
         double[][] centroidAcc = new double[k][m];
         int[] capacity = new int[k];
@@ -56,6 +55,7 @@ public class KmeansX extends Clusterer {
         //centroids initialization by kmeans++
         kmeansPP(k, dtm, clazz, distToClosestCentroid, centroid, centroidAcc, capacity, lower, upper);
 
+        System.err.printf("Iteration (Upper).Squared.cost Data.changed(%%) Dist.invoking.counts(%%) Cost(s)\n");
         for (int iter = 0; iter < maxIter; ++iter) {
             long beginItr = System.currentTimeMillis();
             Arrays.fill(invokes, 0);
@@ -78,7 +78,7 @@ public class KmeansX extends Clusterer {
                             if (distToClosestCentroid[di] <= lower[di][ki] || distToClosestCentroid[di] * 2 <= distBtwCentroids[clazz[di]][ki]) continue;
                             double distToKi = d.squaredDistance(centroid[ki]);
 //                            if (DoubleUtils.compare(lower[di][ki], distToKi, 1e-2) > 0) {
-//                                System.out.printf("%f %f\n", lower[di][ki], distToKi);
+//                                System.out.printf("%f %f\size", lower[di][ki], distToKi);
 //                                throw new RuntimeException();
 //                            }
                             lower[di][ki] = distToKi;
@@ -101,10 +101,10 @@ public class KmeansX extends Clusterer {
                     Document d = dtm.get(di);
                     if (clazzDiff[ki][di] < 0) {
                         capacity[ki]--;
-                        for (int i = 0; i < d.n; ++i) centroidAcc[ki][d.index[i]] -= d.data[i];
+                        for (int i = 0; i < d.size; ++i) centroidAcc[ki][d.index[i]] -= d.data[i];
                     } else {
                         capacity[ki]++;
-                        for (int i = 0; i < d.n; ++i) centroidAcc[ki][d.index[i]] += d.data[i];
+                        for (int i = 0; i < d.size; ++i) centroidAcc[ki][d.index[i]] += d.data[i];
                     }
                     clazzDiff[ki][di] = 0;
                 }
@@ -136,25 +136,24 @@ public class KmeansX extends Clusterer {
             int totInvokes = Arrays.stream(invokes).sum();
             int totChanged = 0;
             for (int di = 0; di < n; ++di) if (changed[di]) totChanged++;
-            System.out.printf("iteration %2d, (upper) squared cost %15.3f, data changed (%5d / %5d = %6.3f%%), ", iter, Arrays.stream(upper).sum(), totChanged, n, totChanged * 100. / n);
-            System.out.printf("squared dist invoking counts (%8d / %8d = %6.3f%%), ", totInvokes, (k * n), totInvokes * 100. / k / n);
-            System.out.printf("time cost %10.3f\n", (System.currentTimeMillis() - beginItr) / 1000.);
+            System.err.printf("%3d         %15.3f          %6.3f           ", iter, Arrays.stream(upper).sum(), totChanged * 100. / n);
+            System.err.printf("%6.3f        ", totInvokes * 100. / k / n);
+            System.err.printf("%10.3f\n", (System.currentTimeMillis() - beginItr) / 1000.);
             if (totChanged == 0) {
-                actualItr = iter;
+                actualItr = iter + 1;
                 break;
             }
         }
 
         //summary
-        Stopwatch.tic();
         for (int di = 0; di < n; ++di) if (!isUpperTight[di]) distToClosestCentroid[di] = dtm.get(di).squaredDistance(centroid[clazz[di]]);
-        Stopwatch.toc();
-        double squaredCost = Arrays.stream(distToClosestCentroid).sum();
-        System.out.printf("K-meansX with k = %d, rn = %d, maxItr = %d, actual Itr = %d, squared cost %.3f, time cost %.3f \n", k, rn, maxIter, actualItr, squaredCost, (System.currentTimeMillis() - beginKmeans) / 1000.);
-        return new KmeansResult(clazz, centroid, capacity, squaredCost, dtm);
+        double actualSquaredCost = Arrays.stream(distToClosestCentroid).sum();
+        System.err.printf("%3d         %15.3f\n", actualItr, actualSquaredCost);
+        return new KmeansResult(clazz, centroid, capacity, actualSquaredCost, dtm);
     }
 
     private static void kmeansPP(int k, DocumentTermMatrix dtm, int[] clazz, double[] distToClosestCentroid, double[][] centroid, double[][] centroidAcc, int[] capacity, double[][] lower, double[] upper) {
+        System.err.println("kmeans++...");
         long begin = System.currentTimeMillis();
         int n = dtm.rows();
         int m = dtm.cols();
@@ -181,6 +180,7 @@ public class KmeansX extends Clusterer {
                 continue;
             }
             while (true) {
+//                System.err.println(Arrays.toString(distToClosestCentroid));
                 int cdi = RandomUtils.discreteX(distToClosestCentroid);
                 if (used[cdi]) continue;
                 used[cdi] = true;
@@ -200,11 +200,10 @@ public class KmeansX extends Clusterer {
                 break;
             }
         }
-        System.out.println(Arrays.toString(capacity));
         for (int di = 0; di < n; ++di) {
             Document d = dtm.get(di);
             int ki = clazz[di];
-            for (int i = 0; i < d.n; ++i) centroidAcc[ki][d.index[i]] += d.data[i];
+            for (int i = 0; i < d.size; ++i) centroidAcc[ki][d.index[i]] += d.data[i];
         }
         for (int ki = 0; ki < k; ++ki) {
             if (capacity[ki] == 0) continue;
@@ -221,7 +220,8 @@ public class KmeansX extends Clusterer {
             }
         }
         Arrays.sort(chosen);
-        System.out.printf("Initialization K-means++ data chosen %s, cost %.3fs \n", Arrays.toString(chosen), (System.currentTimeMillis() - begin) / 1000.);
+        System.err.printf("Centroids %s, cost %.3fs \n", Arrays.toString(chosen), (System.currentTimeMillis() - begin) / 1000.);
+        System.err.println("Capacities " + Arrays.toString(capacity));
     }
 
     private static void updateDistBtwCentroid(double[][] centroid, double[][] res) {
@@ -237,10 +237,8 @@ public class KmeansX extends Clusterer {
     }
 
     public static void main(String[] args) {
-//        List<String>[] csv = FileUtils.readCsv("/Users/dy/Downloads/people_wiki.csv", true);
-//        DocumentTermMatrix trains = DocumentTermMatrix.asTrain(csv[2], csv[1]);
-//        System.out.println(trains);
-//        KmeansResult result = new KmeansX().cluster(trains);
-//        System.out.println(result.toString());
+        DocumentTermMatrix dtm = DocumentTermMatrix.read(new ScannerUTF8(System.in));
+        KmeansResult kmeansResult = KmeansX.cluster(dtm, Integer.valueOf(args[0]), Integer.valueOf(args[1]));
+        System.err.println(kmeansResult);
     }
 }

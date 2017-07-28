@@ -1,6 +1,6 @@
 package mlearn.tokenizer;
 
-import template.debug.InputReaderUnicode;
+import template.debug.ScannerUTF8;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,9 +12,9 @@ import java.util.Map;
  */
 class TrieDictionary extends Dictionary {
 
-    public TrieDictionary(InputReaderUnicode in) {
+    public TrieDictionary(ScannerUTF8 in) {
         while (!in.isExhausted()) {
-            String line = in.readLine();
+            String line = in.nextLine();
             Token token = new Token();
             String[] vecBuf = line.split(" ");
             if (2 > vecBuf.length) {

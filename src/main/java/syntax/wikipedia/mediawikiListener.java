@@ -1,4 +1,4 @@
-// Generated from /Users/dy/AC/src/main/java/wikipedia/mediawiki.g4 by ANTLR 4.7
+// Generated from /Users/dy/TextUtils/src/main/java/syntax/wikipedia/mediawiki.g4 by ANTLR 4.7
 package syntax.wikipedia;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 

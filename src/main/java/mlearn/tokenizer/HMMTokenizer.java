@@ -1,6 +1,6 @@
 package mlearn.tokenizer;
 
-import template.debug.InputReaderUnicode;
+import template.debug.ScannerUTF8;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,25 +26,25 @@ public class HmmTokenizer extends Tokenizer {
     };
     static double MINVALUE = -3.14e100;
 
-    public HmmTokenizer(InputReaderUnicode in) {
+    public HmmTokenizer(ScannerUTF8 in) {
         Arrays.fill(PPx, MINVALUE);
         for (int i = 0; i < Pxixj.length; ++i) Arrays.fill(Pxixj[i], MINVALUE);
         for (int i = 0; i < Pxiyi.length; ++i) Arrays.fill(Pxiyi[i], MINVALUE);
 
         while (!in.isExhausted()) {
-            String line = in.readLine();
+            String line = in.nextLine();
             if (line.charAt(0) == '#') continue;
             String[] tmp = line.split(" ");
             for (int i = 0; i < PPx.length; ++i) PPx[i] = Math.max(PPx[i], Double.valueOf(tmp[i]));
-            line = in.readLine();
+            line = in.nextLine();
             for (int i = 0; i < XN; ++i) {
-                line = in.readLine();
+                line = in.nextLine();
                 tmp = line.split(" ");
                 for (int j = 0; j < XN; ++j) Pxixj[i][j] = Math.max(Pxixj[i][j], Double.valueOf(tmp[j]));
             }
 
             for (int i = 0; i < XN; ) {
-                line = in.readLine();
+                line = in.nextLine();
                 if (line == null) break;
                 if (line.charAt(0) == '#') continue;
                 // StringReader sr = new StringReader(line);
@@ -156,7 +156,7 @@ public class HmmTokenizer extends Tokenizer {
     }
 
     @Override
-    public List<Word> split(List<Word> text) {
+    public List<Word> split0(List<Word> text) {
         throw new UnsupportedOperationException();
     }
 }

@@ -4,6 +4,8 @@ package mlearn;
  * @author dy[jealousing@gmail.com] on 17-5-9.
  */
 
+import com.sun.javafx.binding.StringFormatter;
+
 /**
  * Uncomparable tuple2, with double value truncated to 3 float digits.
  */
@@ -22,6 +24,6 @@ public class Pair<K, V> {
 
     @Override
     public String toString() {
-        return "(" + key + ':' + value + ')';
+        return "(" + key + ":" + value + ")";
     }
 }
