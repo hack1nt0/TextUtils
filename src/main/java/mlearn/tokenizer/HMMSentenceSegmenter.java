@@ -15,7 +15,7 @@ public class HmmSentenceSegmenter implements ISentenceSegmenter {
 //        List<Word> tokens = tokenizer.split0(text);
 //        List<Sentence> ret = new ArrayList<Sentence>();
 //        List<String> buf = new ArrayList<String>();
-//        for (int i = 0; i < tokens.size(); ++i) {
+//        for (int i = 0; i < tokens.capacity(); ++i) {
 //            Word curToken = tokens.get(i);
 //            if (curToken.source.equals("HMM") && allPunc(curToken.word)) {
 //                Sentence newSent = new Sentence(new ArrayList<String>(buf), curToken.word);
@@ -25,7 +25,7 @@ public class HmmSentenceSegmenter implements ISentenceSegmenter {
 //            }
 //            buf.add(curToken.word);
 //        }
-//        if (buf.size() > 0) ret.add(new Sentence(buf, "</SENT_END>"));
+//        if (buf.capacity() > 0) ret.add(new Sentence(buf, "</SENT_END>"));
 //        return ret;
         throw new UnsupportedOperationException();
     }

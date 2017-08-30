@@ -82,8 +82,8 @@ public class MultiDiagNormVariable {
 //        if (-exponent / 2 + PDF_CONSTANT_DIVIDEND > 0) {
 //            di = i = 0;
 //            exponent = 0;
-//            while (i < size) {
-//                if (di < d.size && i == d.index[di]) {
+//            while (i < capacity) {
+//                if (di < d.capacity && i == d.index[di]) {
 //                    exponent += (d.data[di] - mean[i]) * inverse[i] * (d.data[di] - mean[i]);
 //                    di++;
 //                    i++;

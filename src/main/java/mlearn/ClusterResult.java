@@ -8,11 +8,12 @@ import java.util.List;
 public abstract class ClusterResult {
     public abstract int size();
 
-    public abstract Object getTopic(int clusterId);
+    public abstract Object getTopic(int index);
 
-    public abstract int getMembers(int clusterId);
+    public abstract int capacity(int index);
 
-    public abstract List<Object> getPartitions();
+    // Return members of specified cluster.
+    public abstract List<Integer> get(int index);
 
     public abstract double getHeterogeneity();
 

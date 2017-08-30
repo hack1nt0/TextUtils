@@ -133,35 +133,26 @@ public class DocumentTermMatrix implements Iterable<Document>{
         out.println(this.size);
         out.println(this.sparsity);
         out.println(this.constructionTime);
-
         for (int i = 0; i < this.cols; ++i) {
             out.println(termIndexer.getTerm(i));
         }
         for (int i = 0; i < this.cols; ++i) {
-            out.print(idf[i]);
-            out.print(" ");
+            out.println(idf[i]);
         }
-        out.println();
-
         int offset = 0;
+        out.println(offset);
         for (Document doc : matrix) {
             offset += doc.size;
-            out.print(offset);
-            out.print(" ");
+            out.println(offset);
         }
-        out.println();
-
         for (Document doc : matrix) {
             for (int i : doc.index) {
-                out.print(i);
-                out.print(" ");
+                out.println(i);
             }
         }
-        out.println();
         for (Document doc : matrix) {
             for (double i : doc.data) {
-                out.print(i);
-                out.print(" ");
+                out.println(i);
             }
         }
         out.println();
@@ -180,7 +171,8 @@ public class DocumentTermMatrix implements Iterable<Document>{
         dtm.idf = new double[dtm.cols];
         for (int i = 0; i < dtm.cols; ++i) dtm.idf[i] = in.nextDouble();
         dtm.matrix = new Document[dtm.rows];
-        int from = 0;
+        int from = in.nextInt();
+        assert (from == 0);
         for (int i = 0; i < dtm.rows; ++i) {
             int to = in.nextInt();
             int[] index = new int[to - from];

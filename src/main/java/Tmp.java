@@ -11,7 +11,7 @@ public class Tmp {
 //        PrintWriter out = new PrintWriter(new BufferedOutputStream(new FileOutputStream("data/train/spamsms.json")));
 //        out.println('[');
 //        while (in.hasNext()) {
-//            out.printf("%s, \size", in.nextLine());
+//            out.printf("%s, \capacity", in.nextLine());
 //        }
 //        out.println(']');
 //        in.close();

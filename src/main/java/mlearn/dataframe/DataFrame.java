@@ -147,7 +147,6 @@ public class DataFrame {
             format.append("%" + (isNumber ? "" : "-") + w + "s\t");
         }
         format.append("\n");
-        System.err.println(format);
         out.printf(format.toString(), colNames.toArray(new String[0]));
         for (int i = 0; i < rows(); ++i) {
             String[] row = new String[cols()];

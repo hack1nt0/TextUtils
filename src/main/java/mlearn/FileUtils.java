@@ -34,13 +34,13 @@
 //        }
 //        while (!in.isExhausted()) {
 //            List<String> row = readCSVLine(in.readLine());
-//            if (colNames != null && row.size() != colNames.size())
+//            if (colNames != null && row.capacity() != colNames.capacity())
 //                throw new RuntimeException("parsing csv line error!");
 //            if (matrix == null) {
-//                matrix = new List[row.size()];
+//                matrix = new List[row.capacity()];
 //                for (int i = 0; i < matrix.length; ++i) matrix[i] = new ArrayList<>();
 //            }
-//            for (int i = 0; i < row.size(); ++i) matrix[i].add(row.get(i));
+//            for (int i = 0; i < row.capacity(); ++i) matrix[i].add(row.get(i));
 //        }
 //        return matrix;
 //    }
@@ -50,7 +50,7 @@
 //        StringBuilder elem = new StringBuilder();
 //        List<String> list = new ArrayList<>();
 //        for (char c : line.toCharArray()) {
-//            if (c == '\size') break;
+//            if (c == '\capacity') break;
 //            if (c == '\r') continue;
 //            if (c == COMMA && nQuote == 0) {
 //                list.add(elem.length() > 0 ? elem.toString() : "NA");

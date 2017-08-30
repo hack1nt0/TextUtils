@@ -25,7 +25,7 @@ public class MinibatchKmeans extends Clusterer {
     }
 
     public ClusterResult cluster(DocumentTermMatrix dtm, int k, int b, int maxItr) {
-        System.out.printf("mini-batch k-means of clazzes %d, batch size %d and max iterations %d \n", k, b, maxItr);
+        System.out.printf("mini-batch k-means of clazzes %d, batch capacity %d and max iterations %d \n", k, b, maxItr);
         int n = dtm.rows();
         int m = dtm.cols();
         double[][] centroid = new double[k][m];
@@ -50,7 +50,7 @@ public class MinibatchKmeans extends Clusterer {
             Stopwatch.tic();
             int[] batch = RandomUtils.chooseKElems(n, b);
             //int[] batch = new int[b];
-            //for (int i = 0; i < b; ++i) batch[i] = RandomUtils.uniform(size);
+            //for (int i = 0; i < b; ++i) batch[i] = RandomUtils.uniform(capacity);
 
             for (int di : batch) {
                 distToCentroid[di] = Double.MAX_VALUE;
@@ -71,7 +71,7 @@ public class MinibatchKmeans extends Clusterer {
 //                int ki = which[di];
 //                capacity[ki]++;
 //                double eta = 1 / capacity[ki];
-//                //for (int i = 0; i < d.size; ++i) centroid[ki][d.index[i]] = (1 - eta) * centroid[ki][d.index[i]] + eta * d.data[i]; // for 0 to d.size OR for 0 to m
+//                //for (int i = 0; i < d.capacity; ++i) centroid[ki][d.index[i]] = (1 - eta) * centroid[ki][d.index[i]] + eta * d.data[i]; // for 0 to d.capacity OR for 0 to m
 //                average(d, centroid[ki], eta);
 //            }
             for (int ki = 0; ki < k; ++ki) {

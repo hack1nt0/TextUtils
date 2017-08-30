@@ -1,4 +1,5 @@
 import mlearn.DocumentTermMatrix;
+import mlearn.bayesian.GaussianMixtures;
 import mlearn.bayesian.LatentDirichletAllocation;
 import mlearn.kmeans.KmeansX;
 import mlearn.tokenizer.LmHmmTokenizer;
@@ -18,6 +19,7 @@ public class Main {
             System.err.println("-dtm(DocumentTermMatrix)");
             System.err.println("-kmeans");
             System.err.println("-lda");
+            System.err.println("-gmm");
             return;
         }
         if (args[0].equals("-chars")) {
@@ -38,6 +40,9 @@ public class Main {
         }
         if (args[0].equals("-lda")) {
             LatentDirichletAllocation.main(new String[]{args[1], args[2], args[3]});
+        }
+        if (args[0].equals("-gmm")) {
+            GaussianMixtures.main(new String[]{args[1], args[2]});
         }
     }
 }

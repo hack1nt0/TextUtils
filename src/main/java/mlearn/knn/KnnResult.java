@@ -45,15 +45,15 @@ public class KnnResult extends ClassificationResult {
 //    public String toString(int nrow) {
 //        StringWriter stringWriter = new StringWriter();
 //        PrintWriter out = new PrintWriter(stringWriter);
-//        if (size == 1) {
+//        if (capacity == 1) {
 //            KnnNeighbor[] sortedNns = nns[0].toArray(new KnnNeighbor[0]);
 //            Arrays.sort(sortedNns);
-//            out.printf("knn result single test of %d nearest neighbors \size", sortedNns.length);
+//            out.printf("knn result single test of %d nearest neighbors \capacity", sortedNns.length);
 //            int rows = Math.min(nrow, sortedNns.length);
 //            out.println(DataFrame.of(
 //                    StringFrame.of("test id", new StringList() {
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //
@@ -68,7 +68,7 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //                    }), DoubleFrame.of("dist", new DoubleList() {
@@ -78,7 +78,7 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //                    }), StringFrame.of("neighbor id", new StringList() {
@@ -88,7 +88,7 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //                    }), StringFrame.of("top 10 common words", new StringList() {
@@ -98,17 +98,17 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //                    })));
 //        } else {
-//            out.printf("knn result multiple tests of %d documents \size", tests.rows());
+//            out.printf("knn result multiple tests of %d documents \capacity", tests.rows());
 //            int rows = Math.min(nrow, tests.rows());
 //            out.println(DataFrame.of(
 //                    StringFrame.of("test id", new StringList() {
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //
@@ -118,7 +118,7 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //                    }), StringFrame.of("correct class", new StringList() {
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //
@@ -128,7 +128,7 @@ public class KnnResult extends ClassificationResult {
 //                        }
 //                    }), StringFrame.of("classified class", new StringList() {
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //                        @Override
@@ -138,7 +138,7 @@ public class KnnResult extends ClassificationResult {
 //
 //                    }), StringFrame.of("votes", new StringList() {
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //
@@ -159,7 +159,7 @@ public class KnnResult extends ClassificationResult {
 //                            throw new RuntimeException();
 //                        }
 //                        @Override
-//                        public int size() {
+//                        public int capacity() {
 //                            return rows;
 //                        }
 //                    })));
