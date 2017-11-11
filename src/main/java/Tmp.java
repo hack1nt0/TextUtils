@@ -1,4 +1,7 @@
+import template.debug.PrintWriterUTF8;
+import template.debug.RandomUtils;
 import template.debug.ScannerUTF8;
+import template.debug.Stopwatch;
 
 import java.io.*;
 
@@ -7,27 +10,17 @@ import java.io.*;
  */
 public class Tmp {
     public static void main(String[] args) throws Exception {
-//        Scanner in = new Scanner(new BufferedInputStream(new FileInputStream("data/train/spamsms.txt")));
-//        PrintWriter out = new PrintWriter(new BufferedOutputStream(new FileOutputStream("data/train/spamsms.json")));
-//        out.println('[');
-//        while (in.hasNext()) {
-//            out.printf("%s, \capacity", in.nextLine());
-//        }
-//        out.println(']');
-//        in.close();
-//        out.close();
-
-        int v = 0x2F81A;
-        String str = new String(new int[]{v}, 0, 1);
-        ScannerUTF8 in = new ScannerUTF8(new StringBufferInputStream(str));
-        while (!in.isExhausted()) {
-            System.out.println(in.nextString());
+        int n = 12000;
+        double[] xs = new double[n / 2 * n];
+        for (int i = 0; i < xs.length; ++i) xs[i] = RandomUtils.uniform();
+        Stopwatch timer = new Stopwatch();
+        timer.start();
+        PrintWriter out = new PrintWriter(new FileOutputStream("data/tmp.in"));
+        for (int i = 0; i < xs.length; ++i) {
+            out.println(xs[i]);
         }
-//        in.useDelimiter("");
-//        while (in.hasNext()) {
-//            System.out.println(in.next());
-//        }
-        in.close();
-        System.out.println(Integer.toHexString("啊".charAt(0)));
+        out.close();
+        timer.stop();
+        System.out.println("hello\\tworld");
     }
 }

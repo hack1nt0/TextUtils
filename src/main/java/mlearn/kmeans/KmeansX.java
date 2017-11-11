@@ -5,7 +5,10 @@ import template.debug.ScannerUTF8;
 import template.debug.RandomUtils;
 import template.numbers.DoubleUtils;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.Arrays;
+import java.util.Formatter;
 import java.util.stream.IntStream;
 
 /**
@@ -23,11 +26,12 @@ public class KmeansX extends Clusterer {
     }
 
     public KmeansResult cluster(DocumentTermMatrix dtm) {
-        return cluster(dtm, 10, 10);
+        return cluster(dtm, 10, 10, 1);
     }
 
-    public static KmeansResult cluster(DocumentTermMatrix dtm, int k, int maxIter) {
-        System.err.printf("KmeansX(r=%d, c=%d, k = %d, rn = %d, maxItr = %d)...\n", dtm.rows(), dtm.cols(), k, 1, maxIter);
+    public static KmeansResult cluster(DocumentTermMatrix dtm, int k, int maxIter, long seed) {
+        System.err.printf("KmeansX(r=%d, c=%d, k=%d, rn=%d, maxItr=%d, seed=%d)...\n", dtm.rows(), dtm.cols(), k, 1, maxIter, seed);
+        RandomUtils.setSeed(seed);
         long beginKmeans = System.currentTimeMillis();
         int n = dtm.rows();
         int m = dtm.cols();
@@ -158,9 +162,6 @@ public class KmeansX extends Clusterer {
         int n = dtm.rows();
         int m = dtm.cols();
         int[] chosen = new int[k];
-        IntStream.range(0, n)
-                .parallel()
-                .forEach(di -> dtm.get(di).normalize());
 
         Arrays.fill(distToClosestCentroid, Double.MAX_VALUE);
         Arrays.fill(clazz, -1);
@@ -236,9 +237,16 @@ public class KmeansX extends Clusterer {
             }
     }
 
-    public static void main(String[] args) {
-        DocumentTermMatrix dtm = DocumentTermMatrix.read(new ScannerUTF8(System.in));
-        KmeansResult kmeansResult = KmeansX.cluster(dtm, Integer.valueOf(args[0]), Integer.valueOf(args[1]));
+    public static void main(String[] args) throws FileNotFoundException {
+        if (args.length != 4) {
+            System.err.println("Usage: Kmeans(DTM_PATH, K, MAX_ITR, SEED)");
+            return;
+        }
+        DocumentTermMatrix dtm = DocumentTermMatrix.read(new ScannerUTF8(new FileInputStream(args[0])));
+        IntStream.range(0, dtm.rows())
+                .parallel()
+                .forEach(di -> dtm.get(di).normalize());
+        KmeansResult kmeansResult = KmeansX.cluster(dtm, Integer.valueOf(args[1]), Integer.valueOf(args[2]), Long.valueOf(args[3]));
         System.err.println(kmeansResult);
     }
 }

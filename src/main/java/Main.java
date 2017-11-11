@@ -31,7 +31,7 @@ public class Main {
             return;
         }
         if (args[0].equals("-dtm")) {
-            DocumentTermMatrix.main(null);
+            DocumentTermMatrix.cmd(null);
             return;
         }
         if (args[0].equals("-kmeans")) {

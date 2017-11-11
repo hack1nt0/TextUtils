@@ -131,14 +131,6 @@ public class DocumentTermMatrix implements Iterable<Document>{
         out.println(this.rows);
         out.println(this.cols);
         out.println(this.size);
-        out.println(this.sparsity);
-        out.println(this.constructionTime);
-        for (int i = 0; i < this.cols; ++i) {
-            out.println(termIndexer.getTerm(i));
-        }
-        for (int i = 0; i < this.cols; ++i) {
-            out.println(idf[i]);
-        }
         int offset = 0;
         out.println(offset);
         for (Document doc : matrix) {
@@ -155,7 +147,12 @@ public class DocumentTermMatrix implements Iterable<Document>{
                 out.println(i);
             }
         }
-        out.println();
+        for (int i = 0; i < this.cols; ++i) {
+            out.println(termIndexer.getTerm(i));
+        }
+        for (int i = 0; i < this.cols; ++i) {
+            out.println(idf[i]);
+        }
     }
 
     public static DocumentTermMatrix read(ScannerUTF8 in) {
@@ -163,13 +160,6 @@ public class DocumentTermMatrix implements Iterable<Document>{
         dtm.rows = in.nextInt();
         dtm.cols = in.nextInt();
         dtm.size = in.nextInt();
-        dtm.sparsity = in.nextDouble();
-        dtm.constructionTime = in.nextDouble();
-        for (int i = 0; i < dtm.cols; ++i) {
-            dtm.termIndexer.put(in.nextLine());//// TODO: 17-7-25  put method not works.
-        }
-        dtm.idf = new double[dtm.cols];
-        for (int i = 0; i < dtm.cols; ++i) dtm.idf[i] = in.nextDouble();
         dtm.matrix = new Document[dtm.rows];
         int from = in.nextInt();
         assert (from == 0);
@@ -189,6 +179,11 @@ public class DocumentTermMatrix implements Iterable<Document>{
             double[] data = dtm.get(i).data;
             for (int j = 0; j < data.length; ++j) data[j] = in.nextDouble();
         }
+        for (int i = 0; i < dtm.cols; ++i) {
+            dtm.termIndexer.put(in.nextLine());//// TODO: 17-7-25  put method not works.
+        }
+        dtm.idf = new double[dtm.cols];
+        for (int i = 0; i < dtm.cols; ++i) dtm.idf[i] = in.nextDouble();
         return dtm;
     }
 
@@ -209,10 +204,18 @@ public class DocumentTermMatrix implements Iterable<Document>{
         };
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void cmd(String[] args) throws IOException {
         DataFrame df = new DataFrame(new BufferedInputStream(System.in));
         DocumentTermMatrix dtm = new DocumentTermMatrix(StackedTokenizer.split(df.get(1)));
         PrintWriterUTF8 out = new PrintWriterUTF8(System.out);
+        dtm.write(out);
+        out.close();
+    }
+
+    public static void main(String[] args) throws IOException {
+        DataFrame df = new DataFrame(new BufferedInputStream(new FileInputStream("data/train/spamsms.csv")));
+        DocumentTermMatrix dtm = new DocumentTermMatrix(StackedTokenizer.split(df.get(1)));
+        PrintWriterUTF8 out = new PrintWriterUTF8(new FileOutputStream("data/train/spamsms.dtm"));
         dtm.write(out);
         out.close();
     }

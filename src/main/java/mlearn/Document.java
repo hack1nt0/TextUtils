@@ -42,7 +42,8 @@ public class Document{
     public double squaredDistance(Document that) {
         if (termIndexer != that.termIndexer) throw new IllegalArgumentException();
         double dist = 0.0;
-        for (int i = 0, j = 0; i < size && j < that.size; ) {
+        int i = 0, j = 0;
+        while (i < size && j < that.size) {
             int cmp = index[i] - that.index[j];
             if (cmp == 0) {
                 dist += (data[i] - that.data[j]) * (data[i] - that.data[j]);
@@ -56,6 +57,8 @@ public class Document{
                 i++;
             }
         }
+        while (i < size) { dist += data[i] * data[i]; i++;}
+        while (j < that.size) { dist += that.data[j] * that.data[j]; j++;}
         return dist;
     }
 
